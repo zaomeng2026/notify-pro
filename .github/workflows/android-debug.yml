@@ -2,6 +2,9 @@ name: Android Debug APK
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
 
 jobs:
   build-debug:
@@ -20,6 +23,15 @@ jobs:
             echo "Missing ./app module. Please push Android project first."
             exit 1
           fi
+
+      - name: Show revision and key source lines
+        run: |
+          echo "HEAD=$(git rev-parse HEAD)"
+          git log -1 --oneline
+          echo "---- MainActivity.kt snippet ----"
+          sed -n '78,98p' app/src/main/java/com/notifypro/mobile/MainActivity.kt
+          echo "---- NotifyListenerService.kt snippet ----"
+          sed -n '194,206p' app/src/main/java/com/notifypro/mobile/NotifyListenerService.kt
 
       - name: Setup JDK
         uses: actions/setup-java@v4
