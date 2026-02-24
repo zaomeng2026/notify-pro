@@ -27,6 +27,12 @@ class ConfigStore(context: Context) {
         prefs.edit().putString(KEY_AUTH_TOKEN, token.trim()).apply()
     }
 
+    fun getAdminPassword(): String = prefs.getString(KEY_ADMIN_PASSWORD, "")?.trim().orEmpty()
+
+    fun setAdminPassword(password: String) {
+        prefs.edit().putString(KEY_ADMIN_PASSWORD, password.trim()).apply()
+    }
+
     fun clearRemoteConfig() {
         prefs.edit().remove(KEY_API_URL).remove(KEY_AUTH_TOKEN).apply()
     }
@@ -67,6 +73,7 @@ class ConfigStore(context: Context) {
         private const val KEY_BASE_URL = "base_url"
         private const val KEY_API_URL = "api_url"
         private const val KEY_AUTH_TOKEN = "auth_token"
+        private const val KEY_ADMIN_PASSWORD = "admin_password"
         private const val KEY_DEVICE_ID = "device_id"
         private const val KEY_PENDING_QUEUE_JSON = "pending_queue_json"
 

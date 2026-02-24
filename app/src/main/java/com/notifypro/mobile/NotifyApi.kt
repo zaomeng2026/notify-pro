@@ -20,15 +20,28 @@ object NotifyApi {
 
     data class FeatureConfig(
         val voiceBroadcastEnabled: Boolean,
+        val showBrand: Boolean,
+        val showNotice: Boolean,
+        val showContact: Boolean,
+        val showTotalCount: Boolean,
         val showTotalAmount: Boolean,
-        val showTodayAmount: Boolean
+        val showTodayCount: Boolean,
+        val showTodayAmount: Boolean,
+        val showPaymentQrcodes: Boolean,
+        val showWechatQrcode: Boolean,
+        val showAlipayQrcode: Boolean,
+        val showRecordsTable: Boolean,
+        val showFooterActions: Boolean
     )
 
     data class ShopSettings(
         val shopName: String,
         val notice: String,
-        val qrCodeUrl: String,
+        val wechatQrCodeUrl: String,
+        val alipayQrCodeUrl: String,
         val contact: String,
+        val backupKeep: Int,
+        val autoDailyBackupHour: Int,
         val feature: FeatureConfig
     )
 
@@ -109,23 +122,38 @@ object NotifyApi {
         }
     }
 
-    fun saveSettings(baseUrl: String, settings: ShopSettings): ShopSettings? {
+    fun saveSettings(baseUrl: String, settings: ShopSettings, adminPassword: String = ""): ShopSettings? {
         val base = ConfigStore.normalizeBaseUrl(baseUrl)
         if (base.isBlank()) return null
         val body = JSONObject()
             .put("shopName", settings.shopName)
             .put("notice", settings.notice)
-            .put("qrCodeUrl", settings.qrCodeUrl)
+            .put("wechatQrCodeUrl", settings.wechatQrCodeUrl)
+            .put("alipayQrCodeUrl", settings.alipayQrCodeUrl)
             .put("contact", settings.contact)
+            .put("backupKeep", settings.backupKeep)
+            .put("autoDailyBackupHour", settings.autoDailyBackupHour)
             .put(
                 "feature",
                 JSONObject()
                     .put("voiceBroadcastEnabled", settings.feature.voiceBroadcastEnabled)
+                    .put("showBrand", settings.feature.showBrand)
+                    .put("showNotice", settings.feature.showNotice)
+                    .put("showContact", settings.feature.showContact)
+                    .put("showTotalCount", settings.feature.showTotalCount)
                     .put("showTotalAmount", settings.feature.showTotalAmount)
+                    .put("showTodayCount", settings.feature.showTodayCount)
                     .put("showTodayAmount", settings.feature.showTodayAmount)
+                    .put("showPaymentQrcodes", settings.feature.showPaymentQrcodes)
+                    .put("showWechatQrcode", settings.feature.showWechatQrcode)
+                    .put("showAlipayQrcode", settings.feature.showAlipayQrcode)
+                    .put("showRecordsTable", settings.feature.showRecordsTable)
+                    .put("showFooterActions", settings.feature.showFooterActions)
             )
         return try {
-            val (code, text) = request("POST", "$base/api/settings", body.toString(), null, 5000)
+            val headers = mutableMapOf<String, String>()
+            if (adminPassword.isNotBlank()) headers["X-Admin-Password"] = adminPassword
+            val (code, text) = request("POST", "$base/api/settings", body.toString(), headers, 5000)
             if (code != 200 || text.isBlank()) return null
             val json = JSONObject(text)
             if (!json.optBoolean("ok", false)) return null
@@ -264,12 +292,25 @@ object NotifyApi {
         return ShopSettings(
             shopName = json.optString("shopName", ""),
             notice = json.optString("notice", ""),
-            qrCodeUrl = json.optString("qrCodeUrl", ""),
+            wechatQrCodeUrl = json.optString("wechatQrCodeUrl", ""),
+            alipayQrCodeUrl = json.optString("alipayQrCodeUrl", ""),
             contact = json.optString("contact", ""),
+            backupKeep = json.optInt("backupKeep", 30),
+            autoDailyBackupHour = json.optInt("autoDailyBackupHour", 4),
             feature = FeatureConfig(
                 voiceBroadcastEnabled = f?.optBoolean("voiceBroadcastEnabled", false) ?: false,
+                showBrand = f?.optBoolean("showBrand", true) ?: true,
+                showNotice = f?.optBoolean("showNotice", true) ?: true,
+                showContact = f?.optBoolean("showContact", true) ?: true,
+                showTotalCount = f?.optBoolean("showTotalCount", true) ?: true,
                 showTotalAmount = f?.optBoolean("showTotalAmount", true) ?: true,
-                showTodayAmount = f?.optBoolean("showTodayAmount", true) ?: true
+                showTodayCount = f?.optBoolean("showTodayCount", true) ?: true,
+                showTodayAmount = f?.optBoolean("showTodayAmount", true) ?: true,
+                showPaymentQrcodes = f?.optBoolean("showPaymentQrcodes", true) ?: true,
+                showWechatQrcode = f?.optBoolean("showWechatQrcode", true) ?: true,
+                showAlipayQrcode = f?.optBoolean("showAlipayQrcode", true) ?: true,
+                showRecordsTable = f?.optBoolean("showRecordsTable", true) ?: true,
+                showFooterActions = f?.optBoolean("showFooterActions", true) ?: true
             )
         )
     }

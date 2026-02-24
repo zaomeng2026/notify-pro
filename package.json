@@ -5,11 +5,14 @@
   "description": "Notify Pro payment display server",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "start:lan": "node bootstrap.js lan",
+    "start:cloud": "node bootstrap.js cloud"
   },
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^4.19.2",
+    "mysql2": "^3.18.0",
     "qrcode": "^1.5.4"
   }
 }

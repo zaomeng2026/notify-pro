@@ -10,8 +10,8 @@
 </head>
 <body>
   <div class="screen">
-    <div class="topbar">
-      <section class="brand">
+    <div class="topbar" id="module-topbar">
+      <section class="brand" id="module-brand">
         <h1 id="shop-name">Store</h1>
         <div class="clock" id="clock">--</div>
         <div class="conn-status" id="conn-wrap">
@@ -20,81 +20,91 @@
           <span id="conn-meta"></span>
         </div>
       </section>
-      <section class="notice">
+      <section class="notice" id="module-notice">
         <div class="notice-title" id="lbl-notice">Notice</div>
         <div class="notice-text" id="notice-text"></div>
       </section>
-      <section class="contact">
+      <section class="contact" id="module-contact">
         <div class="notice-title" id="lbl-contact">Contact</div>
         <div class="contact-text" id="contact-text"></div>
       </section>
     </div>
 
-    <main class="main">
-      <section class="left">
-        <div class="stats">
-          <div class="stat">
-            <div class="label" id="lbl-total-count">Total Count</div>
-            <div class="value" id="stat-total-count">0</div>
-          </div>
-          <div class="stat" id="stat-card-total-amount">
-            <div class="label" id="lbl-total-amount">Total Amount (CNY)</div>
-            <div class="value" id="stat-total-amount">0</div>
-          </div>
-          <div class="stat">
-            <div class="label" id="lbl-today-count">Today Count</div>
-            <div class="value" id="stat-today-count">0</div>
-          </div>
-          <div class="stat" id="stat-card-today-amount">
-            <div class="label" id="lbl-today-amount">Today Amount (CNY)</div>
-            <div class="value" id="stat-today-amount">0</div>
-          </div>
+    <section class="left" id="module-left">
+      <div class="stats" id="stats-wrap">
+        <div class="stat" id="stat-card-total-count">
+          <div class="label" id="lbl-total-count">Total Count</div>
+          <div class="value" id="stat-total-count">0</div>
         </div>
+        <div class="stat" id="stat-card-total-amount">
+          <div class="label" id="lbl-total-amount">Total Amount (CNY)</div>
+          <div class="value" id="stat-total-amount">0</div>
+        </div>
+        <div class="stat" id="stat-card-today-count">
+          <div class="label" id="lbl-today-count">Today Count</div>
+          <div class="value" id="stat-today-count">0</div>
+        </div>
+        <div class="stat" id="stat-card-today-amount">
+          <div class="label" id="lbl-today-amount">Today Amount (CNY)</div>
+          <div class="value" id="stat-today-amount">0</div>
+        </div>
+      </div>
 
-        <section class="board">
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th style="width: 12%;" id="th-no">No</th>
-                  <th style="width: 18%;" id="th-channel">Channel</th>
-                  <th style="width: 28%;" id="th-amount">Amount (CNY)</th>
-                  <th style="width: 42%;" id="th-time">Time</th>
-                </tr>
-              </thead>
-              <tbody id="tbody"></tbody>
-            </table>
-          </div>
-        </section>
+      <section class="board" id="module-board">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 12%;" id="th-no">No</th>
+                <th style="width: 18%;" id="th-channel">Channel</th>
+                <th style="width: 28%;" id="th-amount">Amount (CNY)</th>
+                <th style="width: 42%;" id="th-time">Time</th>
+              </tr>
+            </thead>
+            <tbody id="tbody"></tbody>
+          </table>
+        </div>
       </section>
+    </section>
 
-      <aside class="qr-panel" id="qr-panel">
-        <div class="qr-grid" id="qr-grid">
-          <div class="qr-item">
-            <div class="qr-title" id="qr-wechat-title">微信收款码</div>
-            <div class="qr-box">
-              <img id="qr-wechat-image" alt="wechat qr" style="display:none;" />
-              <div class="qr-empty" id="qr-wechat-empty">未设置微信收款码</div>
-            </div>
-          </div>
-          <div class="qr-item">
-            <div class="qr-title" id="qr-alipay-title">支付宝收款码</div>
-            <div class="qr-box">
-              <img id="qr-alipay-image" alt="alipay qr" style="display:none;" />
-              <div class="qr-empty" id="qr-alipay-empty">未设置支付宝收款码</div>
-            </div>
+    <aside class="qr-panel" id="qr-panel">
+      <div class="qr-grid" id="qr-grid">
+        <div class="qr-item" id="qr-item-wechat">
+          <div class="qr-title" id="qr-wechat-title">微信收款码</div>
+          <div class="qr-box">
+            <img id="qr-wechat-image" alt="wechat qr" style="display:none;" />
+            <div class="qr-empty" id="qr-wechat-empty">未设置微信收款码</div>
           </div>
         </div>
-        <div class="qr-hidden" id="qr-hidden-text" style="display:none;">支付码展示已关闭</div>
-      </aside>
-    </main>
+        <div class="qr-item" id="qr-item-alipay">
+          <div class="qr-title" id="qr-alipay-title">支付宝收款码</div>
+          <div class="qr-box">
+            <img id="qr-alipay-image" alt="alipay qr" style="display:none;" />
+            <div class="qr-empty" id="qr-alipay-empty">未设置支付宝收款码</div>
+          </div>
+        </div>
+      </div>
+      <div class="qr-hidden" id="qr-hidden-text" style="display:none;">支付码展示已关闭</div>
+    </aside>
 
-    <footer class="footer-actions">
+    <footer class="footer-actions" id="module-footer-actions">
       <button class="btn" id="btn-prev">Prev</button>
       <button class="btn" id="btn-next">Next</button>
       <button class="btn" id="btn-today">Today</button>
       <button class="btn" id="btn-all">All <span id="page-indicator">1/1</span></button>
     </footer>
+  </div>
+
+  <div class="pair-overlay" id="pair-overlay" style="display:none;">
+    <div class="pair-card">
+      <div class="pair-title" id="pair-title">手机扫码绑定</div>
+      <div class="pair-tip" id="pair-tip">检测到当前大屏未绑定手机，请使用手机扫码完成绑定。</div>
+      <div class="pair-qr-box">
+        <img id="pair-qr-image" alt="pair qr" />
+      </div>
+      <div class="pair-meta mono" id="pair-bind-url"></div>
+      <div class="pair-meta" id="pair-state"></div>
+    </div>
   </div>
 
   <script src="/app.js"></script>

@@ -1,6 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="Theme.NotifyPro" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/np_primary</item>
+        <item name="colorPrimaryVariant">@color/np_primary_dark</item>
+        <item name="colorSecondary">@color/np_secondary</item>
+        <item name="colorSurface">@color/np_surface</item>
+        <item name="android:textColor">@color/np_on_surface</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
     </style>
 </resources>

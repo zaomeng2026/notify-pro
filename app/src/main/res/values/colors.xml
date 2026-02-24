@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="np_primary">#0891B2</color>
+    <color name="np_primary_dark">#0E7490</color>
+    <color name="np_secondary">#22D3EE</color>
+    <color name="np_surface">#ECFEFF</color>
+    <color name="np_on_primary">#FFFFFF</color>
+    <color name="np_on_surface">#164E63</color>
+</resources>

@@ -56,11 +56,35 @@ const state = {
     alipayQrCodeUrl: "",
     feature: {
       voiceBroadcastEnabled: false,
+      showBrand: true,
+      showNotice: true,
+      showContact: true,
+      showTotalCount: true,
       showTotalAmount: true,
+      showTodayCount: true,
       showTodayAmount: true,
-      showPaymentQrcodes: true
+      showPaymentQrcodes: true,
+      showWechatQrcode: true,
+      showAlipayQrcode: true,
+      showRecordsTable: true,
+      showFooterActions: true
     }
   }
+};
+
+state.pairing = {
+  enabled: false,
+  session: null,
+  lastFetchedAt: 0
+};
+
+const PAIR_TEXT = {
+  title: "手机扫码绑定",
+  tip: "检测到当前大屏未绑定手机，请使用手机扫码完成绑定。",
+  pending: "等待扫码确认",
+  approved: "已确认，等待手机端领取",
+  used: "已绑定完成",
+  expired: "会话已过期，正在刷新二维码"
 };
 
 const speechState = {
@@ -92,6 +116,8 @@ function setStaticTexts() {
   $("btn-prev").textContent = I18N.btnPrev;
   $("btn-next").textContent = I18N.btnNext;
   $("btn-today").textContent = I18N.btnToday;
+  $("pair-title").textContent = PAIR_TEXT.title;
+  $("pair-tip").textContent = PAIR_TEXT.tip;
   renderAllButtonText();
 }
 
@@ -105,9 +131,11 @@ async function boot() {
   bindActions();
   startClock();
   await Promise.all([loadSettings(), loadRecords(), loadConnectionStatus()]);
+  await syncPublicPairingUi(true);
   connectStream();
   tryAutoFullscreen();
   setInterval(loadConnectionStatus, 15000);
+  setInterval(() => { syncPublicPairingUi(false); }, 6000);
   window.addEventListener("resize", onViewportChange, { passive: true });
 }
 
@@ -184,6 +212,7 @@ async function loadConnectionStatus() {
     if (j && j.ok && j.status) {
       state.connection = j.status;
       renderConnection();
+      syncPublicPairingUi(false);
     }
   } catch (_) {}
 }
@@ -201,7 +230,8 @@ function connectStream() {
   es.addEventListener("payment", (e) => {
     try {
       const record = JSON.parse(e.data);
-      state.records.unshift(record);
+      state.records.push(record);
+      state.records.sort((a, b) => Number(b.createdAt || 0) - Number(a.createdAt || 0));
       if (state.records.length > 500) state.records.length = 500;
       announcePayment(record);
       renderTable();
@@ -219,6 +249,7 @@ function connectStream() {
     try {
       state.connection = JSON.parse(e.data);
       renderConnection();
+      syncPublicPairingUi(false);
     } catch (_) {}
   });
 
@@ -238,7 +269,7 @@ function renderSettings() {
   const color = s.theme && s.theme.accent ? s.theme.accent : "#39b9ff";
   document.documentElement.style.setProperty("--accent", color);
 
-  const wechatSrc = String(s.wechatQrCodeUrl || s.qrCodeUrl || "");
+  const wechatSrc = String(s.wechatQrCodeUrl || "");
   const alipaySrc = String(s.alipayQrCodeUrl || "");
   renderQr("qr-wechat-image", "qr-wechat-empty", wechatSrc);
   renderQr("qr-alipay-image", "qr-alipay-empty", alipaySrc);
@@ -258,21 +289,107 @@ function renderQr(imageId, emptyId, src) {
   }
 }
 
+function isEnabled(feature, key) {
+  return feature[key] !== false;
+}
+
+function setVisible(el, visible, displayValue) {
+  if (!el) return false;
+  el.style.display = visible ? (displayValue || "") : "none";
+  return visible;
+}
+
+function countVisible(list) {
+  return list.filter((el) => !!(el && el.style.display !== "none")).length;
+}
+
 function applyFeature(feature) {
   const f = feature || {};
-  const showTotalAmount = f.showTotalAmount !== false;
-  const showTodayAmount = f.showTodayAmount !== false;
-  const showPaymentQrcodes = f.showPaymentQrcodes !== false;
+  const showBrand = isEnabled(f, "showBrand");
+  const showNotice = isEnabled(f, "showNotice");
+  const showContact = isEnabled(f, "showContact");
+  const showTotalCount = isEnabled(f, "showTotalCount");
+  const showTotalAmount = isEnabled(f, "showTotalAmount");
+  const showTodayCount = isEnabled(f, "showTodayCount");
+  const showTodayAmount = isEnabled(f, "showTodayAmount");
+  const showPaymentQrcodes = isEnabled(f, "showPaymentQrcodes");
+  const showWechatQrcode = isEnabled(f, "showWechatQrcode");
+  const showAlipayQrcode = isEnabled(f, "showAlipayQrcode");
+  const showRecordsTable = isEnabled(f, "showRecordsTable");
+  const showFooterActions = isEnabled(f, "showFooterActions");
 
-  const totalCard = $("stat-card-total-amount");
-  const todayCard = $("stat-card-today-amount");
-  if (totalCard) totalCard.style.display = showTotalAmount ? "" : "none";
-  if (todayCard) todayCard.style.display = showTodayAmount ? "" : "none";
+  const topbar = $("module-topbar");
+  const brandCard = $("module-brand");
+  const noticeCard = $("module-notice");
+  const contactCard = $("module-contact");
+  setVisible(brandCard, showBrand);
+  setVisible(noticeCard, showNotice);
+  setVisible(contactCard, showContact);
+  if (topbar) {
+    const topCount = countVisible([brandCard, noticeCard, contactCard]);
+    if (topCount > 0) {
+      topbar.style.display = "grid";
+      topbar.style.gridTemplateColumns = `repeat(${topCount}, minmax(0, 1fr))`;
+    } else {
+      topbar.style.display = "none";
+      topbar.style.gridTemplateColumns = "";
+    }
+  }
+
+  const statsWrap = $("stats-wrap");
+  const totalCountCard = $("stat-card-total-count");
+  const totalAmountCard = $("stat-card-total-amount");
+  const todayCountCard = $("stat-card-today-count");
+  const todayAmountCard = $("stat-card-today-amount");
+  setVisible(totalCountCard, showTotalCount);
+  setVisible(totalAmountCard, showTotalAmount);
+  setVisible(todayCountCard, showTodayCount);
+  setVisible(todayAmountCard, showTodayAmount);
+  if (statsWrap) {
+    const statCount = countVisible([totalCountCard, totalAmountCard, todayCountCard, todayAmountCard]);
+    if (statCount > 0) {
+      statsWrap.style.display = "grid";
+      statsWrap.style.gridTemplateColumns = `repeat(${statCount}, minmax(0, 1fr))`;
+    } else {
+      statsWrap.style.display = "none";
+      statsWrap.style.gridTemplateColumns = "";
+    }
+  }
+
+  const board = $("module-board");
+  setVisible(board, showRecordsTable);
+  const left = $("module-left");
+  if (left) {
+    const hasStats = !!(statsWrap && statsWrap.style.display !== "none");
+    const hasBoard = !!(board && board.style.display !== "none");
+    if (hasStats || hasBoard) {
+      left.style.display = "grid";
+      if (hasStats && hasBoard) left.style.gridTemplateRows = "auto 1fr";
+      else if (hasStats) left.style.gridTemplateRows = "auto";
+      else left.style.gridTemplateRows = "1fr";
+    } else {
+      left.style.display = "none";
+      left.style.gridTemplateRows = "";
+    }
+  }
 
   const qrGrid = $("qr-grid");
   const qrHidden = $("qr-hidden-text");
-  if (qrGrid) qrGrid.style.display = showPaymentQrcodes ? "grid" : "none";
-  if (qrHidden) qrHidden.style.display = showPaymentQrcodes ? "none" : "grid";
+  const qrPanel = $("qr-panel");
+  const qrWechat = $("qr-item-wechat");
+  const qrAlipay = $("qr-item-alipay");
+  const screen = document.querySelector(".screen");
+  setVisible(qrWechat, showWechatQrcode, "grid");
+  setVisible(qrAlipay, showAlipayQrcode, "grid");
+  const showAnyQrCard = showWechatQrcode || showAlipayQrcode;
+  const showQrPanel = showPaymentQrcodes && showAnyQrCard;
+  if (qrGrid) qrGrid.style.display = showQrPanel ? "grid" : "none";
+  if (qrHidden) qrHidden.style.display = showPaymentQrcodes && !showAnyQrCard ? "grid" : "none";
+  if (qrPanel) qrPanel.style.display = showQrPanel ? "grid" : "none";
+  if (screen) screen.classList.toggle("no-qr", !showQrPanel);
+
+  const footer = $("module-footer-actions");
+  setVisible(footer, showFooterActions, "grid");
 
   if (!f.voiceBroadcastEnabled) {
     clearSpeechQueue();
@@ -357,11 +474,73 @@ function renderConnection() {
   if (c.lastSeenAt) {
     const seen = formatRelative(c.lastSeenAt);
     const who = c.lastDeviceName ? ` ${c.lastDeviceName}` : "";
-    const ip = c.lastIp ? ` ${c.lastIp}` : "";
-    meta.textContent = `${I18N.connSeen} ${seen}${who}${ip}`;
+    meta.textContent = `${I18N.connSeen} ${seen}${who}`;
   } else {
     meta.textContent = I18N.connNoDevice;
   }
+}
+
+function shouldShowPublicPairing() {
+  const c = state.connection || {};
+  return Number(c.deviceCount || 0) <= 0;
+}
+
+function pairingStatusLabel(session) {
+  const status = String((session && session.status) || "").toLowerCase();
+  if (status === "pending") return PAIR_TEXT.pending;
+  if (status === "approved") return PAIR_TEXT.approved;
+  if (status === "used") return PAIR_TEXT.used;
+  return PAIR_TEXT.expired;
+}
+
+function hidePublicPairingUi() {
+  state.pairing.enabled = false;
+  state.pairing.session = null;
+  const wrap = $("pair-overlay");
+  if (wrap) wrap.style.display = "none";
+}
+
+function renderPublicPairingUi(session) {
+  const wrap = $("pair-overlay");
+  const img = $("pair-qr-image");
+  const link = $("pair-bind-url");
+  const statusText = $("pair-state");
+  if (!wrap || !img || !link || !statusText || !session || !session.qrDataUrl) {
+    hidePublicPairingUi();
+    return;
+  }
+
+  state.pairing.enabled = true;
+  state.pairing.session = session;
+  img.src = session.qrDataUrl;
+  link.textContent = String(session.bindUrl || "");
+  statusText.textContent = pairingStatusLabel(session);
+  wrap.style.display = "grid";
+}
+
+async function loadPublicPairingSession() {
+  try {
+    const r = await fetch("/api/pairing/public-session");
+    const j = await r.json();
+    state.pairing.lastFetchedAt = Date.now();
+    if (!j || !j.ok || !j.eligible || !j.session) {
+      hidePublicPairingUi();
+      return;
+    }
+    renderPublicPairingUi(j.session);
+  } catch (_) {
+    hidePublicPairingUi();
+  }
+}
+
+async function syncPublicPairingUi(force) {
+  if (!shouldShowPublicPairing()) {
+    hidePublicPairingUi();
+    return;
+  }
+  const now = Date.now();
+  if (!force && now - Number(state.pairing.lastFetchedAt || 0) < 5000) return;
+  await loadPublicPairingSession();
 }
 
 function renderTable(list) {

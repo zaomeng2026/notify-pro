@@ -55,6 +55,9 @@ class MainActivity : AppCompatActivity() {
         store = ConfigStore(applicationContext)
 
         binding.etBaseUrl.setText(store.getBaseUrl())
+        binding.etAdminPassword.setText(store.getAdminPassword())
+        if (binding.etBackupKeep.text.isNullOrBlank()) binding.etBackupKeep.setText("30")
+        if (binding.etAutoDailyBackupHour.text.isNullOrBlank()) binding.etAutoDailyBackupHour.setText("4")
 
         binding.btnSave.setOnClickListener {
             val base = resolveBaseUrlFromInput()
@@ -156,6 +159,9 @@ class MainActivity : AppCompatActivity() {
             append("设备ID：")
             append(store.getDeviceId())
             append('\n')
+            append("后台密码：")
+            append(if (store.getAdminPassword().isBlank()) "未设置" else "已设置")
+            append('\n')
             append("版本：$versionName")
             append('\n')
             append("安卓：${Build.VERSION.RELEASE}（API ${Build.VERSION.SDK_INT}）")
@@ -193,6 +199,8 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
+        binding.btnTestConnection.isEnabled = false
+        binding.btnTestConnection.text = "测试中..."
         binding.tvConnectionTest.text = "测试中..."
         io.execute {
             val healthOk = NotifyApi.isHealthOk(base, 2500)
@@ -211,6 +219,8 @@ class MainActivity : AppCompatActivity() {
             }
 
             runOnUiThread {
+                binding.btnTestConnection.isEnabled = true
+                binding.btnTestConnection.text = getString(R.string.btn_test_connection)
                 binding.tvConnectionTest.text = buildString {
                     append("健康检查：")
                     append(if (healthOk) "正常" else "失败")
@@ -270,11 +280,24 @@ class MainActivity : AppCompatActivity() {
                 }
                 binding.etShopName.setText(settings.shopName)
                 binding.etNotice.setText(settings.notice)
-                binding.etQrCodeUrl.setText(settings.qrCodeUrl)
+                binding.etWechatQrCodeUrl.setText(settings.wechatQrCodeUrl)
+                binding.etAlipayQrCodeUrl.setText(settings.alipayQrCodeUrl)
                 binding.etContact.setText(settings.contact)
+                binding.etBackupKeep.setText(settings.backupKeep.toString())
+                binding.etAutoDailyBackupHour.setText(settings.autoDailyBackupHour.toString())
                 binding.swVoiceBroadcast.isChecked = settings.feature.voiceBroadcastEnabled
-                binding.swShowTotal.isChecked = settings.feature.showTotalAmount
-                binding.swShowToday.isChecked = settings.feature.showTodayAmount
+                binding.swShowBrand.isChecked = settings.feature.showBrand
+                binding.swShowNotice.isChecked = settings.feature.showNotice
+                binding.swShowContact.isChecked = settings.feature.showContact
+                binding.swShowTotalCount.isChecked = settings.feature.showTotalCount
+                binding.swShowTotalAmount.isChecked = settings.feature.showTotalAmount
+                binding.swShowTodayCount.isChecked = settings.feature.showTodayCount
+                binding.swShowTodayAmount.isChecked = settings.feature.showTodayAmount
+                binding.swShowPaymentQrcodes.isChecked = settings.feature.showPaymentQrcodes
+                binding.swShowWechatQrcode.isChecked = settings.feature.showWechatQrcode
+                binding.swShowAlipayQrcode.isChecked = settings.feature.showAlipayQrcode
+                binding.swShowRecordsTable.isChecked = settings.feature.showRecordsTable
+                binding.swShowFooterActions.isChecked = settings.feature.showFooterActions
             }
         }
     }
@@ -288,18 +311,40 @@ class MainActivity : AppCompatActivity() {
         val payload = NotifyApi.ShopSettings(
             shopName = binding.etShopName.text?.toString().orEmpty().trim(),
             notice = binding.etNotice.text?.toString().orEmpty().trim(),
-            qrCodeUrl = binding.etQrCodeUrl.text?.toString().orEmpty().trim(),
+            wechatQrCodeUrl = binding.etWechatQrCodeUrl.text?.toString().orEmpty().trim(),
+            alipayQrCodeUrl = binding.etAlipayQrCodeUrl.text?.toString().orEmpty().trim(),
             contact = binding.etContact.text?.toString().orEmpty().trim(),
+            backupKeep = (binding.etBackupKeep.text?.toString().orEmpty().trim().toIntOrNull() ?: 30).coerceIn(3, 365),
+            autoDailyBackupHour = (binding.etAutoDailyBackupHour.text?.toString().orEmpty().trim().toIntOrNull() ?: 4).coerceIn(0, 23),
             feature = NotifyApi.FeatureConfig(
                 voiceBroadcastEnabled = binding.swVoiceBroadcast.isChecked,
-                showTotalAmount = binding.swShowTotal.isChecked,
-                showTodayAmount = binding.swShowToday.isChecked
+                showBrand = binding.swShowBrand.isChecked,
+                showNotice = binding.swShowNotice.isChecked,
+                showContact = binding.swShowContact.isChecked,
+                showTotalCount = binding.swShowTotalCount.isChecked,
+                showTotalAmount = binding.swShowTotalAmount.isChecked,
+                showTodayCount = binding.swShowTodayCount.isChecked,
+                showTodayAmount = binding.swShowTodayAmount.isChecked,
+                showPaymentQrcodes = binding.swShowPaymentQrcodes.isChecked,
+                showWechatQrcode = binding.swShowWechatQrcode.isChecked,
+                showAlipayQrcode = binding.swShowAlipayQrcode.isChecked,
+                showRecordsTable = binding.swShowRecordsTable.isChecked,
+                showFooterActions = binding.swShowFooterActions.isChecked
             )
         )
+        val inputPwd = binding.etAdminPassword.text?.toString().orEmpty().trim()
+        val adminPassword = if (inputPwd.isNotBlank()) inputPwd else store.getAdminPassword()
+        if (adminPassword.isNotBlank()) {
+            store.setAdminPassword(adminPassword)
+        }
 
+        binding.btnSaveSettings.isEnabled = false
+        binding.btnSaveSettings.text = "保存中..."
         io.execute {
-            val saved = NotifyApi.saveSettings(base, payload)
+            val saved = NotifyApi.saveSettings(base, payload, adminPassword)
             runOnUiThread {
+                binding.btnSaveSettings.isEnabled = true
+                binding.btnSaveSettings.text = getString(R.string.btn_save_settings)
                 if (saved == null) {
                     MobileLogStore.warn(applicationContext, "保存设置失败")
                     toast("保存设置失败")

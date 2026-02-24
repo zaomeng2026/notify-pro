@@ -43,6 +43,9 @@
         <span id="connDot" class="dot offline"></span>
         <span id="connLine"></span>
       </div>
+      <div class="row" style="margin-top:10px;">
+        <button id="openStats" type="button">Open Stats</button>
+      </div>
     </section>
 
     <section class="card">
@@ -50,6 +53,9 @@
       <div class="field"><label id="lb-shop"></label><input id="shopName" /></div>
       <div class="field"><label id="lb-notice"></label><textarea id="notice"></textarea></div>
       <div class="field"><label id="lb-contact"></label><input id="contact" /></div>
+      <div class="field"><label id="lb-admin-password"></label><input id="adminPassword" type="password" placeholder="留空不修改" /></div>
+      <div class="field"><label id="lb-backup-keep"></label><input id="backupKeep" type="number" min="3" max="365" step="1" /></div>
+      <div class="field"><label id="lb-backup-hour"></label><input id="autoDailyBackupHour" type="number" min="0" max="23" step="1" /></div>
 
       <div class="grid">
         <div class="field preview-box">
@@ -67,9 +73,18 @@
       </div>
 
       <div class="field-check"><input id="showPaymentQrcodes" type="checkbox" /><label id="lb-show-qrs"></label></div>
+      <div class="field-check"><input id="showBrand" type="checkbox" /><label id="lb-show-brand"></label></div>
+      <div class="field-check"><input id="showNotice" type="checkbox" /><label id="lb-show-notice"></label></div>
+      <div class="field-check"><input id="showContact" type="checkbox" /><label id="lb-show-contact"></label></div>
       <div class="field-check"><input id="voiceBroadcastEnabled" type="checkbox" /><label id="lb-voice"></label></div>
+      <div class="field-check"><input id="showTotalCount" type="checkbox" /><label id="lb-show-total-count"></label></div>
       <div class="field-check"><input id="showTotalAmount" type="checkbox" /><label id="lb-show-total-amount"></label></div>
+      <div class="field-check"><input id="showTodayCount" type="checkbox" /><label id="lb-show-today-count"></label></div>
       <div class="field-check"><input id="showTodayAmount" type="checkbox" /><label id="lb-show-today-amount"></label></div>
+      <div class="field-check"><input id="showWechatQrcode" type="checkbox" /><label id="lb-show-wechat-qr"></label></div>
+      <div class="field-check"><input id="showAlipayQrcode" type="checkbox" /><label id="lb-show-alipay-qr"></label></div>
+      <div class="field-check"><input id="showRecordsTable" type="checkbox" /><label id="lb-show-records-table"></label></div>
+      <div class="field-check"><input id="showFooterActions" type="checkbox" /><label id="lb-show-footer-actions"></label></div>
       <div class="field"><label id="lb-accent"></label><input id="accent" placeholder="#1f6feb" /></div>
       <div class="row">
         <button id="saveSettings"></button>
@@ -96,19 +111,6 @@
     </section>
 
     <section class="card">
-      <h2 id="h-fallback"></h2>
-      <div class="grid">
-        <div class="field"><label id="lb-pair-code"></label><input id="pairCode" placeholder="123456" /></div>
-        <div class="field"><label id="lb-auth-token"></label><input id="authToken" /></div>
-      </div>
-      <div class="row">
-        <button id="savePairing"></button>
-        <span id="pairingStatus" class="status"></span>
-      </div>
-      <div class="muted" id="devices"></div>
-    </section>
-
-    <section class="card">
       <h2 id="h-data"></h2>
       <div class="row">
         <button id="clearRecords" class="danger"></button>
@@ -132,6 +134,7 @@
       wechatQr: "微信收款码（可直接上传图片）",
       alipayQr: "支付宝收款码（可直接上传图片）",
       showQrs: "大屏显示支付二维码",
+      showContact: "大屏显示联系方式",
       voice: "开启收款语音播报",
       showTotalAmount: "大屏显示总金额",
       showTodayAmount: "大屏显示今日金额",
@@ -144,15 +147,9 @@
       bindState: "会话状态",
       bindExp: "过期时间",
       bindTip: "刷新页面会自动恢复最近未完成会话，不会丢失。",
-      fallback: "兼容配对（旧流程）",
-      pairCode: "配对码（6位）",
-      token: "Auth Token（可选）",
-      savePair: "保存配对配置",
       data: "数据维护",
       clear: "清空收款记录",
       noSession: "未生成",
-      noDevices: "暂无",
-      devicesPrefix: "已绑定设备: ",
       saved: "保存成功",
       saveFailed: "保存失败",
       createFailed: "生成失败",
@@ -169,36 +166,64 @@
       token: "",
       timer: null,
       wechatQrCodeUrl: "",
-      alipayQrCodeUrl: ""
+      alipayQrCodeUrl: "",
+      adminAuthPassword: sessionStorage.getItem("notify_pro_admin_pwd") || "",
+      autoSessionCreating: false
     };
 
     const fmtTime = (ts) => (ts ? new Date(ts).toLocaleString() : "-");
     const $ = (id) => document.getElementById(id);
+    const rootWrap = document.querySelector(".wrap");
 
     const hAdmin = $("h-admin");
     const linePage = $("line-page");
     const baseUrlLine = $("baseUrlLine");
     const connDot = $("connDot");
     const connLine = $("connLine");
+    const openStats = $("openStats");
 
     const hStore = $("h-store");
     const lbShop = $("lb-shop");
     const lbNotice = $("lb-notice");
     const lbContact = $("lb-contact");
+    const lbAdminPassword = $("lb-admin-password");
+    const lbBackupKeep = $("lb-backup-keep");
+    const lbBackupHour = $("lb-backup-hour");
     const lbWechatQr = $("lb-wechat-qr");
     const lbAlipayQr = $("lb-alipay-qr");
     const lbShowQrs = $("lb-show-qrs");
+    const lbShowBrand = $("lb-show-brand");
+    const lbShowNotice = $("lb-show-notice");
     const lbAccent = $("lb-accent");
     const shopName = $("shopName");
     const notice = $("notice");
     const contact = $("contact");
+    const adminPassword = $("adminPassword");
+    const backupKeep = $("backupKeep");
+    const autoDailyBackupHour = $("autoDailyBackupHour");
     const showPaymentQrcodes = $("showPaymentQrcodes");
+    const showBrand = $("showBrand");
+    const showNotice = $("showNotice");
+    const showContact = $("showContact");
     const voiceBroadcastEnabled = $("voiceBroadcastEnabled");
+    const showTotalCount = $("showTotalCount");
     const showTotalAmount = $("showTotalAmount");
+    const showTodayCount = $("showTodayCount");
     const showTodayAmount = $("showTodayAmount");
+    const showWechatQrcode = $("showWechatQrcode");
+    const showAlipayQrcode = $("showAlipayQrcode");
+    const showRecordsTable = $("showRecordsTable");
+    const showFooterActions = $("showFooterActions");
+    const lbShowContact = $("lb-show-contact");
     const lbVoice = $("lb-voice");
+    const lbShowTotalCount = $("lb-show-total-count");
     const lbShowTotalAmount = $("lb-show-total-amount");
+    const lbShowTodayCount = $("lb-show-today-count");
     const lbShowTodayAmount = $("lb-show-today-amount");
+    const lbShowWechatQr = $("lb-show-wechat-qr");
+    const lbShowAlipayQr = $("lb-show-alipay-qr");
+    const lbShowRecordsTable = $("lb-show-records-table");
+    const lbShowFooterActions = $("lb-show-footer-actions");
     const accent = $("accent");
     const saveSettings = $("saveSettings");
     const settingsStatus = $("settingsStatus");
@@ -222,15 +247,6 @@
     const bindState = $("bindState");
     const bindExpire = $("bindExpire");
 
-    const hFallback = $("h-fallback");
-    const lbPairCode = $("lb-pair-code");
-    const pairCode = $("pairCode");
-    const lbAuthToken = $("lb-auth-token");
-    const authToken = $("authToken");
-    const savePairing = $("savePairing");
-    const pairingStatus = $("pairingStatus");
-    const devices = $("devices");
-
     const hData = $("h-data");
     const clearRecords = $("clearRecords");
     const clearStatus = $("clearStatus");
@@ -238,27 +254,51 @@
     function setTexts() {
       document.title = I18N.title;
       hAdmin.textContent = I18N.title;
-      linePage.textContent = I18N.page;
+      linePage.textContent = "显示页: / | 安装向导: /setup | 完整统计: /stats";
       baseUrlLine.textContent = I18N.base + "-";
       connLine.textContent = I18N.conn + "-";
       connDot.className = "dot offline";
+      openStats.textContent = "打开完整统计";
 
       hStore.textContent = I18N.store;
       lbShop.textContent = I18N.shop;
       lbNotice.textContent = I18N.notice;
       lbContact.textContent = I18N.contact;
+      lbAdminPassword.textContent = "后台进入密码（留空不修改）";
+      lbBackupKeep.textContent = "备份保留份数（3-365）";
+      lbBackupHour.textContent = "自动备份时间（0-23 点）";
       lbWechatQr.textContent = I18N.wechatQr;
       lbAlipayQr.textContent = I18N.alipayQr;
       lbShowQrs.textContent = I18N.showQrs;
+      lbShowBrand.textContent = "\u5927\u5c4f\u663e\u793a\u5e97\u94fa\u6807\u9898";
+      lbShowNotice.textContent = "\u5927\u5c4f\u663e\u793a\u516c\u544a\u5361\u7247";
+      lbShowContact.textContent = I18N.showContact;
       lbVoice.textContent = I18N.voice;
+      lbShowTotalCount.textContent = "\u5927\u5c4f\u663e\u793a\u603b\u7b14\u6570";
       lbShowTotalAmount.textContent = I18N.showTotalAmount;
+      lbShowTodayCount.textContent = "\u5927\u5c4f\u663e\u793a\u4eca\u65e5\u7b14\u6570";
       lbShowTodayAmount.textContent = I18N.showTodayAmount;
+      lbShowWechatQr.textContent = "\u5927\u5c4f\u663e\u793a\u5fae\u4fe1\u6536\u6b3e\u7801";
+      lbShowAlipayQr.textContent = "\u5927\u5c4f\u663e\u793a\u652f\u4ed8\u5b9d\u6536\u6b3e\u7801";
+      lbShowRecordsTable.textContent = "\u5927\u5c4f\u663e\u793a\u6536\u6b3e\u660e\u7ec6\u8868";
+      lbShowFooterActions.textContent = "\u5927\u5c4f\u663e\u793a\u5206\u9875\u6309\u94ae";
       lbAccent.textContent = I18N.accent;
       saveSettings.textContent = I18N.saveStore;
       showPaymentQrcodes.checked = true;
+      showBrand.checked = true;
+      showNotice.checked = true;
+      showContact.checked = true;
       voiceBroadcastEnabled.checked = false;
+      showTotalCount.checked = true;
       showTotalAmount.checked = true;
+      showTodayCount.checked = true;
       showTodayAmount.checked = true;
+      showWechatQrcode.checked = true;
+      showAlipayQrcode.checked = true;
+      showRecordsTable.checked = true;
+      showFooterActions.checked = true;
+      backupKeep.value = "30";
+      autoDailyBackupHour.value = "4";
 
       hPhone.textContent = I18N.phoneBind;
       linePhoneFlow.textContent = I18N.phoneFlow;
@@ -268,11 +308,6 @@
       lbBindExp.textContent = I18N.bindExp;
       lineBindTip.textContent = I18N.bindTip;
       bindUrl.textContent = I18N.noSession;
-
-      hFallback.textContent = I18N.fallback;
-      lbPairCode.textContent = I18N.pairCode;
-      lbAuthToken.textContent = I18N.token;
-      savePairing.textContent = I18N.savePair;
 
       hData.textContent = I18N.data;
       clearRecords.textContent = I18N.clear;
@@ -297,11 +332,79 @@
       bindExpire.textContent = fmtTime(session.expiresAt);
     }
 
+    async function verifyAdminPassword(pwd) {
+      const r = await fetch("/api/admin/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: pwd || "" })
+      });
+      if (!r.ok) return false;
+      const j = await r.json();
+      return !!(j && j.ok && j.verified !== false);
+    }
+
+    async function ensureAdminPasswordReady(forcePrompt) {
+      const statusRes = await fetch("/api/admin/auth-status");
+      const status = await statusRes.json();
+      if (!(status && status.ok && status.required)) {
+        state.adminAuthPassword = "";
+        sessionStorage.removeItem("notify_pro_admin_pwd");
+        return true;
+      }
+
+      let pwd = "";
+      if (!forcePrompt) {
+        pwd = state.adminAuthPassword || sessionStorage.getItem("notify_pro_admin_pwd") || "";
+      }
+      if (!pwd) {
+        pwd = String(prompt("请输入后台访问密码") || "").trim();
+      }
+      if (!pwd) return false;
+
+      const ok = await verifyAdminPassword(pwd);
+      if (!ok) {
+        alert("后台密码错误");
+        state.adminAuthPassword = "";
+        sessionStorage.removeItem("notify_pro_admin_pwd");
+        return false;
+      }
+      state.adminAuthPassword = pwd;
+      sessionStorage.setItem("notify_pro_admin_pwd", pwd);
+      return true;
+    }
+
+    async function fetchWithAdmin(url, options) {
+      const authOk = await ensureAdminPasswordReady(false);
+      if (!authOk) {
+        throw new Error("admin password required");
+      }
+      const opt = Object.assign({}, options || {});
+      const headers = Object.assign({}, opt.headers || {});
+      if (state.adminAuthPassword) {
+        headers["X-Admin-Password"] = state.adminAuthPassword;
+      }
+      opt.headers = headers;
+
+      let r = await fetch(url, opt);
+      if (r.status !== 401) return r;
+
+      const retryAuth = await ensureAdminPasswordReady(true);
+      if (!retryAuth) return r;
+      opt.headers = Object.assign({}, headers, { "X-Admin-Password": state.adminAuthPassword });
+      return fetch(url, opt);
+    }
+
     async function loadSystemInfo() {
       try {
         const r = await fetch("/api/system/info");
         const j = await r.json();
-        if (j && j.ok) baseUrlLine.textContent = I18N.base + j.baseUrl;
+        if (j && j.ok) {
+          const rev = j.serverRevision ? ` | rev: ${j.serverRevision}` : "";
+          baseUrlLine.textContent = I18N.base + j.baseUrl + rev;
+          if (!("settingsSchemaVersion" in j) || Number(j.settingsSchemaVersion || 0) < 3) {
+            settingsStatus.textContent = "警告：当前运行的服务端版本过旧，模块开关可能无法保存。请关闭所有 node.exe 后重新启动。";
+          }
+        }
       } catch (_) {}
     }
 
@@ -322,50 +425,88 @@
 
     async function loadLatestSession() {
       try {
-        const r = await fetch("/api/pairing/session/latest");
+        const r = await fetchWithAdmin("/api/pairing/session/latest");
         const j = await r.json();
         if (j && j.ok) {
           applySession(j.session);
           if (j.session && (j.session.status === "pending" || j.session.status === "approved")) pollSession();
+          return j.session || null;
         }
       } catch (_) {}
+      return null;
+    }
+
+    function isAwaitingSession(session) {
+      return !!session && (session.status === "pending" || session.status === "approved");
+    }
+
+    async function ensureAutoPairingSession() {
+      const latest = await loadLatestSession();
+      if (isAwaitingSession(latest)) return latest;
+      if (state.autoSessionCreating) return null;
+      state.autoSessionCreating = true;
+      try {
+        await createSession(true);
+      } finally {
+        state.autoSessionCreating = false;
+      }
+      return null;
     }
 
     async function loadAll() {
-      const [sRes, pRes] = await Promise.all([
-        fetch("/api/settings").then((r) => r.json()),
-        fetch("/api/pairing/config").then((r) => r.json())
-      ]);
+      const sRes = await fetch("/api/settings").then((r) => r.json());
 
       if (sRes.ok && sRes.settings) {
         const s = sRes.settings;
+        if (Number(sRes.schemaVersion || 0) < 3) {
+          settingsStatus.textContent = "警告：服务端配置版本过旧，请重启最新服务后再保存模块开关。";
+        }
         shopName.value = s.shopName || "";
         notice.value = s.notice || "";
         contact.value = s.contact || "";
+        backupKeep.value = String(Number(s.backupKeep == null ? 30 : s.backupKeep));
+        autoDailyBackupHour.value = String(Number(s.autoDailyBackupHour == null ? 4 : s.autoDailyBackupHour));
         const feature = s.feature || {};
+        const requiredFeatureKeys = [
+          "showBrand",
+          "showNotice",
+          "showTotalCount",
+          "showTodayCount",
+          "showWechatQrcode",
+          "showAlipayQrcode",
+          "showRecordsTable",
+          "showFooterActions"
+        ];
+        const missingFeatureKeys = requiredFeatureKeys.filter((k) => !(k in feature));
+        if (missingFeatureKeys.length) {
+          settingsStatus.textContent = "警告：服务端配置结构仍是旧版，请完全重启服务后再保存模块开关。";
+        }
         showPaymentQrcodes.checked = feature.showPaymentQrcodes !== false;
+        showBrand.checked = feature.showBrand !== false;
+        showNotice.checked = feature.showNotice !== false;
+        showContact.checked = feature.showContact !== false;
         voiceBroadcastEnabled.checked = !!feature.voiceBroadcastEnabled;
+        showTotalCount.checked = feature.showTotalCount !== false;
         showTotalAmount.checked = feature.showTotalAmount !== false;
+        showTodayCount.checked = feature.showTodayCount !== false;
         showTodayAmount.checked = feature.showTodayAmount !== false;
+        showWechatQrcode.checked = feature.showWechatQrcode !== false;
+        showAlipayQrcode.checked = feature.showAlipayQrcode !== false;
+        showRecordsTable.checked = feature.showRecordsTable !== false;
+        showFooterActions.checked = feature.showFooterActions !== false;
         accent.value = (s.theme && s.theme.accent) || "#1f6feb";
 
-        state.wechatQrCodeUrl = s.wechatQrCodeUrl || s.qrCodeUrl || "";
+        state.wechatQrCodeUrl = s.wechatQrCodeUrl || "";
         state.alipayQrCodeUrl = s.alipayQrCodeUrl || "";
         renderQrPreview("wechat", state.wechatQrCodeUrl);
         renderQrPreview("alipay", state.alipayQrCodeUrl);
       }
 
-      if (pRes.ok && pRes.pairing) {
-        pairCode.value = pRes.pairing.code || "";
-        authToken.value = pRes.pairing.authToken || "";
-        const list = Object.values(pRes.pairing.devices || {});
-        devices.textContent = I18N.devicesPrefix + (list.length ? list.map((d) => `${d.deviceName}/${d.platform}`).join(" | ") : I18N.noDevices);
-      }
     }
 
-    async function createSession() {
+    async function createSession(isAuto) {
       sessionStatus.textContent = "";
-      const r = await fetch("/api/pairing/session", {
+      const r = await fetchWithAdmin("/api/pairing/session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({})
@@ -376,7 +517,7 @@
         return;
       }
       applySession(j.session);
-      sessionStatus.textContent = I18N.qrCreated;
+      sessionStatus.textContent = isAuto ? (I18N.qrCreated + " (auto)") : I18N.qrCreated;
       pollSession();
     }
 
@@ -384,7 +525,7 @@
       if (!state.token) return;
       if (state.timer) clearTimeout(state.timer);
       try {
-        const r = await fetch("/api/pairing/session/" + encodeURIComponent(state.token));
+        const r = await fetchWithAdmin("/api/pairing/session/" + encodeURIComponent(state.token));
         const j = await r.json();
         if (j.ok && j.session) {
           applySession(j.session);
@@ -438,28 +579,57 @@
 
     saveSettings.addEventListener("click", async () => {
       settingsStatus.textContent = "";
+      if (state.wechatQrCodeUrl && state.alipayQrCodeUrl && state.wechatQrCodeUrl === state.alipayQrCodeUrl) {
+        settingsStatus.textContent = "提醒：微信码和支付宝码当前是同一张图片";
+      }
       const payload = {
         shopName: shopName.value,
         notice: notice.value,
         contact: contact.value,
+        backupKeep: Math.max(3, Math.min(365, Number(backupKeep.value || 30) || 30)),
+        autoDailyBackupHour: Math.max(0, Math.min(23, Number(autoDailyBackupHour.value || 4) || 4)),
         wechatQrCodeUrl: state.wechatQrCodeUrl || "",
         alipayQrCodeUrl: state.alipayQrCodeUrl || "",
         feature: {
           showPaymentQrcodes: !!showPaymentQrcodes.checked,
+          showBrand: !!showBrand.checked,
+          showNotice: !!showNotice.checked,
+          showContact: !!showContact.checked,
           voiceBroadcastEnabled: !!voiceBroadcastEnabled.checked,
+          showTotalCount: !!showTotalCount.checked,
           showTotalAmount: !!showTotalAmount.checked,
-          showTodayAmount: !!showTodayAmount.checked
+          showTodayCount: !!showTodayCount.checked,
+          showTodayAmount: !!showTodayAmount.checked,
+          showWechatQrcode: !!showWechatQrcode.checked,
+          showAlipayQrcode: !!showAlipayQrcode.checked,
+          showRecordsTable: !!showRecordsTable.checked,
+          showFooterActions: !!showFooterActions.checked
         },
         theme: { accent: accent.value }
       };
-      const r = await fetch("/api/settings", {
+      const newAdminPassword = String(adminPassword.value || "").trim();
+      if (newAdminPassword) payload.adminPassword = newAdminPassword;
+      const r = await fetchWithAdmin("/api/settings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       });
       const j = await r.json();
       settingsStatus.textContent = j.ok ? I18N.saved : (j.message || I18N.saveFailed);
-      if (j.ok) loadAll();
+      if (j.ok) {
+        const persisted = (j.settings && j.settings.feature) || {};
+        const mismatch = Object.keys(payload.feature).filter((k) => persisted[k] !== payload.feature[k]);
+        if (mismatch.length) {
+          settingsStatus.textContent = `保存异常：${mismatch.join(", ")} 未生效。请确认当前服务已升级并重启后再试。`;
+          return;
+        }
+        if (newAdminPassword) {
+          state.adminAuthPassword = newAdminPassword;
+          sessionStorage.setItem("notify_pro_admin_pwd", newAdminPassword);
+          adminPassword.value = "";
+        }
+        loadAll();
+      }
     });
 
     wechatQrFile.addEventListener("change", (e) => handleQrFile("wechat", e.target.files && e.target.files[0]));
@@ -479,31 +649,26 @@
       settingsStatus.textContent = "已清除支付宝收款码，点击“保存店铺信息”生效";
     });
 
-    savePairing.addEventListener("click", async () => {
-      pairingStatus.textContent = "";
-      const payload = { code: pairCode.value, authToken: authToken.value };
-      const r = await fetch("/api/pairing/config", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
-      const j = await r.json();
-      pairingStatus.textContent = j.ok ? I18N.saved : (j.message || I18N.saveFailed);
-      if (j.ok) loadAll();
-    });
-
     clearRecords.addEventListener("click", async () => {
       clearStatus.textContent = "";
       if (!confirm(I18N.clearConfirm)) return;
-      const r = await fetch("/api/records", { method: "DELETE" });
+      const r = await fetchWithAdmin("/api/records", { method: "DELETE" });
       const j = await r.json();
       clearStatus.textContent = j.ok ? I18N.cleared : (j.message || I18N.clearFailed);
     });
 
-    newSession.addEventListener("click", createSession);
+    newSession.addEventListener("click", () => createSession(false));
+    openStats.addEventListener("click", () => { window.open("/stats", "_blank"); });
 
+    if (rootWrap) rootWrap.style.display = "none";
     setTexts();
-    Promise.all([loadSystemInfo(), loadAll(), loadLatestSession(), loadConnectionStatus()]).catch((err) => alert(err.message));
+    ensureAdminPasswordReady(false)
+      .then((ok) => {
+        if (!ok) throw new Error("需要输入后台密码");
+        if (rootWrap) rootWrap.style.display = "";
+        return Promise.all([loadSystemInfo(), loadAll(), ensureAutoPairingSession(), loadConnectionStatus()]);
+      })
+      .catch((err) => alert(err.message));
     setInterval(loadConnectionStatus, 5000);
   </script>
 </body>
