@@ -89,11 +89,9 @@ function setStaticTexts() {
   $("qr-wechat-empty").textContent = I18N.qrWechatEmpty;
   $("qr-alipay-empty").textContent = I18N.qrAlipayEmpty;
   $("qr-hidden-text").textContent = I18N.qrHidden;
-  $("btn-fs").textContent = I18N.btnFs;
   $("btn-prev").textContent = I18N.btnPrev;
   $("btn-next").textContent = I18N.btnNext;
   $("btn-today").textContent = I18N.btnToday;
-  $("fs-overlay-btn").textContent = I18N.enterFullscreen;
   renderAllButtonText();
 }
 
@@ -139,14 +137,6 @@ function bindActions() {
     renderTable(state.records);
   });
 
-  $("btn-fs").addEventListener("click", async () => {
-    await requestFullscreen();
-  });
-
-  $("fs-overlay-btn").addEventListener("click", async () => {
-    await requestFullscreen();
-    $("fs-overlay").style.display = "none";
-  });
 }
 
 async function loadSettings() {
@@ -436,9 +426,6 @@ async function requestFullscreen() {
 
 function tryAutoFullscreen() {
   requestFullscreen().catch(() => {});
-  if (!document.fullscreenElement) {
-    $("fs-overlay").style.display = "grid";
-  }
 }
 
 boot().catch((err) => {

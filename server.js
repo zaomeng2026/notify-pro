@@ -14,7 +14,7 @@ const PAIRING_FILE = path.join(DATA_DIR, 'pairing.json');
 const RECORDS_FILE = path.join(DATA_DIR, 'records.json');
 const PAIRING_SESSIONS_FILE = path.join(DATA_DIR, 'pairing_sessions.json');
 
-const MAX_RECORDS = 2000;
+const MAX_RECORDS = Math.max(1000, Number(process.env.MAX_RECORDS || 20000));
 const MAX_STREAM_CLIENTS = 200;
 const SESSION_TTL_MS = 5 * 60 * 1000;
 const APPROVAL_TTL_MS = 10 * 60 * 1000;
