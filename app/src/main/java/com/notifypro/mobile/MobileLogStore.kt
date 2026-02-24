@@ -11,6 +11,7 @@ object MobileLogStore {
     private const val PREFS_NAME = "notify_pro_mobile_logs"
     private const val KEY_ITEMS = "items"
     private const val MAX_ITEMS = 500
+    private const val MAX_MSG_LEN = 4000
 
     data class Item(
         val ts: Long,
@@ -35,7 +36,7 @@ object MobileLogStore {
     @Synchronized
     fun render(context: Context, limit: Int = 200): String {
         val items = read(context, limit)
-        if (items.isEmpty()) return "No logs"
+        if (items.isEmpty()) return "暂无日志"
         val sdf = SimpleDateFormat("MM-dd HH:mm:ss", Locale.getDefault())
         return buildString {
             for (item in items) {
@@ -55,7 +56,7 @@ object MobileLogStore {
             Item(
                 ts = System.currentTimeMillis(),
                 level = level,
-                message = message.trim().take(500)
+                message = message.trim().take(MAX_MSG_LEN)
             )
         )
         val trimmed = if (current.size > MAX_ITEMS) current.takeLast(MAX_ITEMS) else current
@@ -107,4 +108,3 @@ object MobileLogStore {
     private fun prefs(context: Context) =
         context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 }
-

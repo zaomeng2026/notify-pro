@@ -1,30 +1,34 @@
 const I18N = {
-  shopDefault: "\u6211\u7684\u5e97\u94fa",
-  notice: "\u516c\u544a",
-  contact: "\u8054\u7cfb\u65b9\u5f0f",
-  totalCount: "\u603b\u7b14\u6570",
-  totalAmount: "\u603b\u91d1\u989d(\u5143)",
-  todayCount: "\u4eca\u65e5\u7b14\u6570",
-  todayAmount: "\u4eca\u65e5\u91d1\u989d(\u5143)",
-  thNo: "\u5e8f\u53f7",
-  thChannel: "\u6536\u6b3e\u7c7b\u578b",
-  thAmount: "\u6536\u6b3e\u91d1\u989d(\u5143)",
-  thTime: "\u6536\u6b3e\u65f6\u95f4",
-  emptyRecords: "\u6682\u65e0\u6536\u6b3e\u8bb0\u5f55",
-  qrEmpty: "\u672a\u8bbe\u7f6e\u4e2a\u4eba\u4e8c\u7ef4\u7801",
-  btnFs: "\u5168\u5c4f",
-  btnPrev: "\u4e0a\u4e00\u9875",
-  btnNext: "\u4e0b\u4e00\u9875",
-  btnToday: "\u4eca\u65e5\u6570\u636e",
-  btnAll: "\u5386\u53f2\u6570\u636e",
-  enterFullscreen: "\u70b9\u51fb\u8fdb\u5165\u5168\u5c4f",
-  connOnline: "\u5728\u7ebf",
-  connOffline: "\u79bb\u7ebf",
-  connNoDevice: "\u6682\u65e0\u8bbe\u5907",
-  connSeen: "\u6700\u8fd1",
-  wechat: "\u5fae\u4fe1",
-  alipay: "\u652f\u4ed8\u5b9d",
-  other: "\u5176\u4ed6"
+  shopDefault: "我的店铺",
+  notice: "公告",
+  contact: "联系方式",
+  totalCount: "总笔数",
+  totalAmount: "总金额(元)",
+  todayCount: "今日笔数",
+  todayAmount: "今日金额(元)",
+  thNo: "序号",
+  thChannel: "收款类型",
+  thAmount: "收款金额(元)",
+  thTime: "收款时间",
+  emptyRecords: "暂无收款记录",
+  qrWechatTitle: "微信收款码",
+  qrAlipayTitle: "支付宝收款码",
+  qrWechatEmpty: "未设置微信收款码",
+  qrAlipayEmpty: "未设置支付宝收款码",
+  qrHidden: "支付码展示已关闭",
+  btnFs: "全屏",
+  btnPrev: "上一页",
+  btnNext: "下一页",
+  btnToday: "今日数据",
+  btnAll: "历史数据",
+  enterFullscreen: "点击进入全屏",
+  connOnline: "在线",
+  connOffline: "离线",
+  connNoDevice: "暂无设备",
+  connSeen: "最近",
+  wechat: "微信",
+  alipay: "支付宝",
+  other: "其他"
 };
 
 const state = {
@@ -47,12 +51,14 @@ const state = {
   settings: {
     shopName: I18N.shopDefault,
     notice: "",
-    qrCodeUrl: "",
     contact: "",
+    wechatQrCodeUrl: "",
+    alipayQrCodeUrl: "",
     feature: {
       voiceBroadcastEnabled: false,
       showTotalAmount: true,
-      showTodayAmount: true
+      showTodayAmount: true,
+      showPaymentQrcodes: true
     }
   }
 };
@@ -67,7 +73,7 @@ function $(id) {
 }
 
 function setStaticTexts() {
-  document.title = "\u6536\u6b3e\u6570\u636e\u540c\u6b65\u5927\u5c4f";
+  document.title = "收款数据同步大屏";
   $("lbl-notice").textContent = I18N.notice;
   $("lbl-contact").textContent = I18N.contact;
   $("lbl-total-count").textContent = I18N.totalCount;
@@ -78,7 +84,11 @@ function setStaticTexts() {
   $("th-channel").textContent = I18N.thChannel;
   $("th-amount").textContent = I18N.thAmount;
   $("th-time").textContent = I18N.thTime;
-  $("qr-empty").textContent = I18N.qrEmpty;
+  $("qr-wechat-title").textContent = I18N.qrWechatTitle;
+  $("qr-alipay-title").textContent = I18N.qrAlipayTitle;
+  $("qr-wechat-empty").textContent = I18N.qrWechatEmpty;
+  $("qr-alipay-empty").textContent = I18N.qrAlipayEmpty;
+  $("qr-hidden-text").textContent = I18N.qrHidden;
   $("btn-fs").textContent = I18N.btnFs;
   $("btn-prev").textContent = I18N.btnPrev;
   $("btn-next").textContent = I18N.btnNext;
@@ -220,15 +230,22 @@ function renderSettings() {
   const color = s.theme && s.theme.accent ? s.theme.accent : "#39b9ff";
   document.documentElement.style.setProperty("--accent", color);
 
-  const qr = $("qr-image");
-  const empty = $("qr-empty");
-  if (s.qrCodeUrl) {
-    qr.src = s.qrCodeUrl;
-    qr.style.display = "block";
+  const wechatSrc = String(s.wechatQrCodeUrl || s.qrCodeUrl || "");
+  const alipaySrc = String(s.alipayQrCodeUrl || "");
+  renderQr("qr-wechat-image", "qr-wechat-empty", wechatSrc);
+  renderQr("qr-alipay-image", "qr-alipay-empty", alipaySrc);
+}
+
+function renderQr(imageId, emptyId, src) {
+  const img = $(imageId);
+  const empty = $(emptyId);
+  if (src) {
+    img.src = src;
+    img.style.display = "block";
     empty.style.display = "none";
   } else {
-    qr.removeAttribute("src");
-    qr.style.display = "none";
+    img.removeAttribute("src");
+    img.style.display = "none";
     empty.style.display = "block";
   }
 }
@@ -237,11 +254,17 @@ function applyFeature(feature) {
   const f = feature || {};
   const showTotalAmount = f.showTotalAmount !== false;
   const showTodayAmount = f.showTodayAmount !== false;
+  const showPaymentQrcodes = f.showPaymentQrcodes !== false;
 
   const totalCard = $("stat-card-total-amount");
   const todayCard = $("stat-card-today-amount");
   if (totalCard) totalCard.style.display = showTotalAmount ? "" : "none";
   if (todayCard) todayCard.style.display = showTodayAmount ? "" : "none";
+
+  const qrGrid = $("qr-grid");
+  const qrHidden = $("qr-hidden-text");
+  if (qrGrid) qrGrid.style.display = showPaymentQrcodes ? "grid" : "none";
+  if (qrHidden) qrHidden.style.display = showPaymentQrcodes ? "none" : "grid";
 
   if (!f.voiceBroadcastEnabled) {
     clearSpeechQueue();
@@ -395,11 +418,11 @@ function startClock() {
 
 function formatRelative(ts) {
   const sec = Math.max(0, Math.floor((Date.now() - Number(ts || 0)) / 1000));
-  if (sec < 60) return `${sec}\u79d2\u524d`;
+  if (sec < 60) return `${sec}秒前`;
   const min = Math.floor(sec / 60);
-  if (min < 60) return `${min}\u5206\u949f\u524d`;
+  if (min < 60) return `${min}分钟前`;
   const hr = Math.floor(min / 60);
-  return `${hr}\u5c0f\u65f6\u524d`;
+  return `${hr}小时前`;
 }
 
 async function requestFullscreen() {

@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Notify Pro Admin</title>
+  <title>收款大屏后台</title>
   <style>
     body { margin: 0; font-family: "Microsoft YaHei", sans-serif; background: #f3f6fb; color: #13253e; }
-    .wrap { max-width: 960px; margin: 24px auto; padding: 0 16px; }
+    .wrap { max-width: 980px; margin: 24px auto; padding: 0 16px; }
     .card { background: #fff; border-radius: 12px; box-shadow: 0 6px 24px rgba(20, 50, 90, 0.08); padding: 20px; margin-bottom: 16px; }
     h1, h2 { margin: 0 0 12px; }
     .muted { color: #5f728d; font-size: 13px; }
@@ -28,13 +28,15 @@
     .qr-box { border: 1px dashed #9db5d2; border-radius: 8px; min-height: 280px; display: grid; place-items: center; background: #f9fcff; }
     .qr-box img { width: 260px; height: 260px; object-fit: contain; }
     .mono { font-family: Consolas, "Courier New", monospace; font-size: 13px; word-break: break-all; line-height: 1.4; }
+    .preview-box { display: grid; gap: 8px; }
+    .preview-img { width: 180px; height: 180px; object-fit: contain; border: 1px dashed #9db5d2; border-radius: 8px; background: #f9fcff; }
     @media (max-width: 900px) { .grid, .qr-wrap { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>
   <div class="wrap">
     <section class="card">
-      <h1 id="h-admin">Admin</h1>
+      <h1 id="h-admin">收款大屏后台</h1>
       <div class="muted" id="line-page"></div>
       <div class="muted" id="baseUrlLine"></div>
       <div class="muted conn-row">
@@ -44,11 +46,27 @@
     </section>
 
     <section class="card">
-      <h2 id="h-store">Store</h2>
+      <h2 id="h-store">店铺信息</h2>
       <div class="field"><label id="lb-shop"></label><input id="shopName" /></div>
       <div class="field"><label id="lb-notice"></label><textarea id="notice"></textarea></div>
-      <div class="field"><label id="lb-qr-url"></label><input id="qrCodeUrl" /></div>
       <div class="field"><label id="lb-contact"></label><input id="contact" /></div>
+
+      <div class="grid">
+        <div class="field preview-box">
+          <label id="lb-wechat-qr"></label>
+          <input id="wechatQrFile" type="file" accept="image/*" />
+          <img id="wechatQrPreview" class="preview-img" alt="wechat qr preview" />
+          <button id="clearWechatQr" type="button">清除微信收款码</button>
+        </div>
+        <div class="field preview-box">
+          <label id="lb-alipay-qr"></label>
+          <input id="alipayQrFile" type="file" accept="image/*" />
+          <img id="alipayQrPreview" class="preview-img" alt="alipay qr preview" />
+          <button id="clearAlipayQr" type="button">清除支付宝收款码</button>
+        </div>
+      </div>
+
+      <div class="field-check"><input id="showPaymentQrcodes" type="checkbox" /><label id="lb-show-qrs"></label></div>
       <div class="field-check"><input id="voiceBroadcastEnabled" type="checkbox" /><label id="lb-voice"></label></div>
       <div class="field-check"><input id="showTotalAmount" type="checkbox" /><label id="lb-show-total-amount"></label></div>
       <div class="field-check"><input id="showTodayAmount" type="checkbox" /><label id="lb-show-today-amount"></label></div>
@@ -101,49 +119,59 @@
 
   <script>
     const I18N = {
-      title: "\u6536\u6b3e\u5927\u5c4f\u540e\u53f0",
-      page: "\u5c55\u793a\u9875: / | \u5b89\u88c5\u5411\u5bfc: /setup",
-      base: "\u7cfb\u7edf\u57fa\u51c6\u5730\u5740: ",
-      conn: "\u8fde\u63a5\u72b6\u6001: ",
-      online: "\u5728\u7ebf",
-      offline: "\u79bb\u7ebf",
-      store: "\u5e97\u94fa\u4fe1\u606f",
-      shop: "\u5e97\u94fa\u540d\u79f0",
-      notice: "\u516c\u544a",
-      qrUrl: "\u4e2a\u4eba\u4e8c\u7ef4\u7801\u94fe\u63a5",
-      contact: "\u8054\u7cfb\u65b9\u5f0f",
-      voice: "\u5f00\u542f\u6536\u6b3e\u8bed\u97f3\u64ad\u62a5",
-      showTotalAmount: "\u5927\u5c4f\u663e\u793a\u603b\u91d1\u989d",
-      showTodayAmount: "\u5927\u5c4f\u663e\u793a\u4eca\u65e5\u91d1\u989d",
-      accent: "\u4e3b\u9898\u8272",
-      saveStore: "\u4fdd\u5b58\u5e97\u94fa\u4fe1\u606f",
-      phoneBind: "\u624b\u673a\u7ed1\u5b9a\uff08\u63a8\u8350\uff09",
-      phoneFlow: "\u751f\u6210\u4e8c\u7ef4\u7801 -> \u624b\u673a\u626b\u7801\u786e\u8ba4 -> Auto.js \u81ea\u52a8\u9886\u53d6\u914d\u7f6e",
-      newQr: "\u751f\u6210\u7ed1\u5b9a\u4e8c\u7ef4\u7801",
-      bindUrl: "\u7ed1\u5b9a\u94fe\u63a5",
-      bindState: "\u4f1a\u8bdd\u72b6\u6001",
-      bindExp: "\u8fc7\u671f\u65f6\u95f4",
-      bindTip: "\u5237\u65b0\u9875\u9762\u4f1a\u81ea\u52a8\u6062\u590d\u6700\u8fd1\u672a\u5b8c\u6210\u4f1a\u8bdd\uff0c\u4e0d\u4f1a\u4e22\u5931\u3002",
-      fallback: "\u517c\u5bb9\u914d\u5bf9\uff08\u65e7\u6d41\u7a0b\uff09",
-      pairCode: "\u914d\u5bf9\u7801\uff086\u4f4d\uff09",
-      token: "Auth Token\uff08\u53ef\u9009\uff09",
-      savePair: "\u4fdd\u5b58\u914d\u5bf9\u914d\u7f6e",
-      data: "\u6570\u636e\u7ef4\u62a4",
-      clear: "\u6e05\u7a7a\u6536\u6b3e\u8bb0\u5f55",
-      noSession: "\u672a\u751f\u6210",
-      noDevices: "\u6682\u65e0",
-      devicesPrefix: "\u5df2\u7ed1\u5b9a\u8bbe\u5907: ",
-      saved: "\u4fdd\u5b58\u6210\u529f",
-      saveFailed: "\u4fdd\u5b58\u5931\u8d25",
-      createFailed: "\u751f\u6210\u5931\u8d25",
-      qrCreated: "\u4e8c\u7ef4\u7801\u5df2\u751f\u6210",
-      bindDone: "\u81ea\u52a8\u7ed1\u5b9a\u5b8c\u6210",
-      clearConfirm: "\u786e\u8ba4\u6e05\u7a7a\u6240\u6709\u6536\u6b3e\u8bb0\u5f55\uff1f",
-      cleared: "\u5df2\u6e05\u7a7a",
-      clearFailed: "\u6e05\u7a7a\u5931\u8d25"
+      title: "收款大屏后台",
+      page: "展示页: / | 安装向导: /setup",
+      base: "系统基准地址: ",
+      conn: "连接状态: ",
+      online: "在线",
+      offline: "离线",
+      store: "店铺信息",
+      shop: "店铺名称",
+      notice: "公告",
+      contact: "联系方式",
+      wechatQr: "微信收款码（可直接上传图片）",
+      alipayQr: "支付宝收款码（可直接上传图片）",
+      showQrs: "大屏显示支付二维码",
+      voice: "开启收款语音播报",
+      showTotalAmount: "大屏显示总金额",
+      showTodayAmount: "大屏显示今日金额",
+      accent: "主题色",
+      saveStore: "保存店铺信息",
+      phoneBind: "手机绑定（推荐）",
+      phoneFlow: "生成二维码 -> 手机扫码确认 -> 手机端自动领取配置",
+      newQr: "生成绑定二维码",
+      bindUrl: "绑定链接",
+      bindState: "会话状态",
+      bindExp: "过期时间",
+      bindTip: "刷新页面会自动恢复最近未完成会话，不会丢失。",
+      fallback: "兼容配对（旧流程）",
+      pairCode: "配对码（6位）",
+      token: "Auth Token（可选）",
+      savePair: "保存配对配置",
+      data: "数据维护",
+      clear: "清空收款记录",
+      noSession: "未生成",
+      noDevices: "暂无",
+      devicesPrefix: "已绑定设备: ",
+      saved: "保存成功",
+      saveFailed: "保存失败",
+      createFailed: "生成失败",
+      qrCreated: "二维码已生成",
+      bindDone: "自动绑定完成",
+      clearConfirm: "确认清空所有收款记录？",
+      cleared: "已清空",
+      clearFailed: "清空失败",
+      imgTooLarge: "图片太大，请选择 2MB 以内图片",
+      imgReadFailed: "读取图片失败"
     };
 
-    const state = { token: "", timer: null };
+    const state = {
+      token: "",
+      timer: null,
+      wechatQrCodeUrl: "",
+      alipayQrCodeUrl: ""
+    };
+
     const fmtTime = (ts) => (ts ? new Date(ts).toLocaleString() : "-");
     const $ = (id) => document.getElementById(id);
 
@@ -156,13 +184,15 @@
     const hStore = $("h-store");
     const lbShop = $("lb-shop");
     const lbNotice = $("lb-notice");
-    const lbQrUrl = $("lb-qr-url");
     const lbContact = $("lb-contact");
+    const lbWechatQr = $("lb-wechat-qr");
+    const lbAlipayQr = $("lb-alipay-qr");
+    const lbShowQrs = $("lb-show-qrs");
     const lbAccent = $("lb-accent");
     const shopName = $("shopName");
     const notice = $("notice");
-    const qrCodeUrl = $("qrCodeUrl");
     const contact = $("contact");
+    const showPaymentQrcodes = $("showPaymentQrcodes");
     const voiceBroadcastEnabled = $("voiceBroadcastEnabled");
     const showTotalAmount = $("showTotalAmount");
     const showTodayAmount = $("showTodayAmount");
@@ -172,6 +202,12 @@
     const accent = $("accent");
     const saveSettings = $("saveSettings");
     const settingsStatus = $("settingsStatus");
+    const wechatQrFile = $("wechatQrFile");
+    const alipayQrFile = $("alipayQrFile");
+    const wechatQrPreview = $("wechatQrPreview");
+    const alipayQrPreview = $("alipayQrPreview");
+    const clearWechatQr = $("clearWechatQr");
+    const clearAlipayQr = $("clearAlipayQr");
 
     const hPhone = $("h-phone");
     const linePhoneFlow = $("line-phone-flow");
@@ -210,16 +246,19 @@
       hStore.textContent = I18N.store;
       lbShop.textContent = I18N.shop;
       lbNotice.textContent = I18N.notice;
-      lbQrUrl.textContent = I18N.qrUrl;
       lbContact.textContent = I18N.contact;
+      lbWechatQr.textContent = I18N.wechatQr;
+      lbAlipayQr.textContent = I18N.alipayQr;
+      lbShowQrs.textContent = I18N.showQrs;
       lbVoice.textContent = I18N.voice;
       lbShowTotalAmount.textContent = I18N.showTotalAmount;
       lbShowTodayAmount.textContent = I18N.showTodayAmount;
+      lbAccent.textContent = I18N.accent;
+      saveSettings.textContent = I18N.saveStore;
+      showPaymentQrcodes.checked = true;
       voiceBroadcastEnabled.checked = false;
       showTotalAmount.checked = true;
       showTodayAmount.checked = true;
-      lbAccent.textContent = I18N.accent;
-      saveSettings.textContent = I18N.saveStore;
 
       hPhone.textContent = I18N.phoneBind;
       linePhoneFlow.textContent = I18N.phoneFlow;
@@ -237,6 +276,9 @@
 
       hData.textContent = I18N.data;
       clearRecords.textContent = I18N.clear;
+
+      renderQrPreview("wechat", "");
+      renderQrPreview("alipay", "");
     }
 
     function applySession(session) {
@@ -259,9 +301,7 @@
       try {
         const r = await fetch("/api/system/info");
         const j = await r.json();
-        if (j && j.ok) {
-          baseUrlLine.textContent = I18N.base + j.baseUrl;
-        }
+        if (j && j.ok) baseUrlLine.textContent = I18N.base + j.baseUrl;
       } catch (_) {}
     }
 
@@ -286,9 +326,7 @@
         const j = await r.json();
         if (j && j.ok) {
           applySession(j.session);
-          if (j.session && (j.session.status === "pending" || j.session.status === "approved")) {
-            pollSession();
-          }
+          if (j.session && (j.session.status === "pending" || j.session.status === "approved")) pollSession();
         }
       } catch (_) {}
     }
@@ -303,13 +341,18 @@
         const s = sRes.settings;
         shopName.value = s.shopName || "";
         notice.value = s.notice || "";
-        qrCodeUrl.value = s.qrCodeUrl || "";
         contact.value = s.contact || "";
         const feature = s.feature || {};
+        showPaymentQrcodes.checked = feature.showPaymentQrcodes !== false;
         voiceBroadcastEnabled.checked = !!feature.voiceBroadcastEnabled;
         showTotalAmount.checked = feature.showTotalAmount !== false;
         showTodayAmount.checked = feature.showTodayAmount !== false;
         accent.value = (s.theme && s.theme.accent) || "#1f6feb";
+
+        state.wechatQrCodeUrl = s.wechatQrCodeUrl || s.qrCodeUrl || "";
+        state.alipayQrCodeUrl = s.alipayQrCodeUrl || "";
+        renderQrPreview("wechat", state.wechatQrCodeUrl);
+        renderQrPreview("alipay", state.alipayQrCodeUrl);
       }
 
       if (pRes.ok && pRes.pairing) {
@@ -355,14 +398,54 @@
       state.timer = setTimeout(pollSession, 2000);
     }
 
+    function renderQrPreview(type, src) {
+      const img = type === "wechat" ? wechatQrPreview : alipayQrPreview;
+      if (!src) {
+        img.removeAttribute("src");
+        img.style.display = "none";
+        return;
+      }
+      img.src = src;
+      img.style.display = "block";
+    }
+
+    function readImageAsDataUrl(file) {
+      return new Promise((resolve, reject) => {
+        if (!file) return resolve("");
+        if (file.size > 2 * 1024 * 1024) {
+          reject(new Error(I18N.imgTooLarge));
+          return;
+        }
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || ""));
+        reader.onerror = () => reject(new Error(I18N.imgReadFailed));
+        reader.readAsDataURL(file);
+      });
+    }
+
+    async function handleQrFile(type, file) {
+      try {
+        const dataUrl = await readImageAsDataUrl(file);
+        if (!dataUrl) return;
+        if (type === "wechat") state.wechatQrCodeUrl = dataUrl;
+        if (type === "alipay") state.alipayQrCodeUrl = dataUrl;
+        renderQrPreview(type, dataUrl);
+        settingsStatus.textContent = "图片已载入，点击“保存店铺信息”生效";
+      } catch (e) {
+        settingsStatus.textContent = e.message || I18N.imgReadFailed;
+      }
+    }
+
     saveSettings.addEventListener("click", async () => {
       settingsStatus.textContent = "";
       const payload = {
         shopName: shopName.value,
         notice: notice.value,
-        qrCodeUrl: qrCodeUrl.value,
         contact: contact.value,
+        wechatQrCodeUrl: state.wechatQrCodeUrl || "",
+        alipayQrCodeUrl: state.alipayQrCodeUrl || "",
         feature: {
+          showPaymentQrcodes: !!showPaymentQrcodes.checked,
           voiceBroadcastEnabled: !!voiceBroadcastEnabled.checked,
           showTotalAmount: !!showTotalAmount.checked,
           showTodayAmount: !!showTodayAmount.checked
@@ -376,6 +459,24 @@
       });
       const j = await r.json();
       settingsStatus.textContent = j.ok ? I18N.saved : (j.message || I18N.saveFailed);
+      if (j.ok) loadAll();
+    });
+
+    wechatQrFile.addEventListener("change", (e) => handleQrFile("wechat", e.target.files && e.target.files[0]));
+    alipayQrFile.addEventListener("change", (e) => handleQrFile("alipay", e.target.files && e.target.files[0]));
+
+    clearWechatQr.addEventListener("click", () => {
+      state.wechatQrCodeUrl = "";
+      wechatQrFile.value = "";
+      renderQrPreview("wechat", "");
+      settingsStatus.textContent = "已清除微信收款码，点击“保存店铺信息”生效";
+    });
+
+    clearAlipayQr.addEventListener("click", () => {
+      state.alipayQrCodeUrl = "";
+      alipayQrFile.value = "";
+      renderQrPreview("alipay", "");
+      settingsStatus.textContent = "已清除支付宝收款码，点击“保存店铺信息”生效";
     });
 
     savePairing.addEventListener("click", async () => {

@@ -23,7 +23,7 @@ const NOTIFY_DEDUPE_MS = Number(process.env.NOTIFY_DEDUPE_MS || 8 * 1000);
 const CLIENT_MSG_ID_TTL_MS = Number(process.env.CLIENT_MSG_ID_TTL_MS || 24 * 60 * 60 * 1000);
 
 app.use(cors());
-app.use(express.json({ limit: '1mb' }));
+app.use(express.json({ limit: '8mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 ensureDataFiles();
@@ -355,17 +355,22 @@ app.post('/api/settings', (req, res) => {
   const body = req.body || {};
   const oldFeature = oldSettings.feature || {};
   const inputFeature = body.feature || {};
+  const incomingWechatQr = body.wechatQrCodeUrl != null ? body.wechatQrCodeUrl : body.qrCodeUrl;
+  const incomingAlipayQr = body.alipayQrCodeUrl;
 
   const settings = normalizeSettings({
     ...oldSettings,
     shopName: safeText(body.shopName) || oldSettings.shopName,
     notice: safeText(body.notice),
-    qrCodeUrl: safeText(body.qrCodeUrl),
+    wechatQrCodeUrl: pickQrValue(incomingWechatQr, oldSettings.wechatQrCodeUrl || ''),
+    alipayQrCodeUrl: pickQrValue(incomingAlipayQr, oldSettings.alipayQrCodeUrl || ''),
+    qrCodeUrl: pickQrValue(incomingWechatQr, oldSettings.wechatQrCodeUrl || oldSettings.qrCodeUrl || ''),
     contact: safeText(body.contact),
     feature: {
       voiceBroadcastEnabled: toBool(inputFeature.voiceBroadcastEnabled, !!oldFeature.voiceBroadcastEnabled),
       showTotalAmount: toBool(inputFeature.showTotalAmount, oldFeature.showTotalAmount !== false),
-      showTodayAmount: toBool(inputFeature.showTodayAmount, oldFeature.showTodayAmount !== false)
+      showTodayAmount: toBool(inputFeature.showTodayAmount, oldFeature.showTodayAmount !== false),
+      showPaymentQrcodes: toBool(inputFeature.showPaymentQrcodes, oldFeature.showPaymentQrcodes !== false)
     },
     theme: {
       accent: normalizeColor(body.theme && body.theme.accent) || oldSettings.theme.accent
@@ -646,6 +651,22 @@ function normalizeColor(v) {
   return '';
 }
 
+function normalizeQrImageValue(v) {
+  if (v == null) return '';
+  const s = String(v).trim();
+  if (!s) return '';
+  if (/^https?:\/\/\S+$/i.test(s)) return s.slice(0, 1000);
+  if (/^data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=\r\n]+$/.test(s) && s.length <= 2_500_000) {
+    return s.replace(/\s+/g, '');
+  }
+  return '';
+}
+
+function pickQrValue(input, oldValue) {
+  if (input == null) return normalizeQrImageValue(oldValue);
+  return normalizeQrImageValue(input);
+}
+
 function absoluteUrl(pathname) {
   return BASE_URL + pathname;
 }
@@ -691,16 +712,22 @@ function normalizeSettings(settings) {
   const d = defaultSettings();
   const s = settings || {};
   const feature = s.feature || {};
+  const wechatQr = normalizeQrImageValue(s.wechatQrCodeUrl || s.qrCodeUrl || '');
+  const alipayQr = normalizeQrImageValue(s.alipayQrCodeUrl || '');
   return {
     ...d,
     ...s,
+    wechatQrCodeUrl: wechatQr,
+    alipayQrCodeUrl: alipayQr,
+    qrCodeUrl: wechatQr || alipayQr || '',
     theme: {
       accent: normalizeColor(s.theme && s.theme.accent) || d.theme.accent
     },
     feature: {
       voiceBroadcastEnabled: toBool(feature.voiceBroadcastEnabled, d.feature.voiceBroadcastEnabled),
       showTotalAmount: toBool(feature.showTotalAmount, d.feature.showTotalAmount),
-      showTodayAmount: toBool(feature.showTodayAmount, d.feature.showTodayAmount)
+      showTodayAmount: toBool(feature.showTodayAmount, d.feature.showTodayAmount),
+      showPaymentQrcodes: toBool(feature.showPaymentQrcodes, d.feature.showPaymentQrcodes)
     }
   };
 }
@@ -709,12 +736,15 @@ function defaultSettings() {
   return {
     shopName: '\u6211\u7684\u5e97\u94fa',
     notice: '\u6b22\u8fce\u5149\u4e34\uff0c\u652f\u6301\u5fae\u4fe1/\u652f\u4ed8\u5b9d\u6536\u6b3e',
+    wechatQrCodeUrl: '',
+    alipayQrCodeUrl: '',
     qrCodeUrl: '',
     contact: '\u8054\u7cfb\u7535\u8bdd\uff1a13800000000',
     feature: {
       voiceBroadcastEnabled: false,
       showTotalAmount: true,
-      showTodayAmount: true
+      showTodayAmount: true,
+      showPaymentQrcodes: true
     },
     theme: { accent: '#1f6feb' }
   };

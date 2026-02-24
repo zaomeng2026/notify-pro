@@ -68,10 +68,10 @@ class MainActivity : AppCompatActivity() {
             if (baseChanged) {
                 // Only clear claimed api/token when base host actually changed.
                 store.clearRemoteConfig()
-                MobileLogStore.warn(applicationContext, "base changed, cleared claimed api/token: $oldBase -> $base")
+                MobileLogStore.warn(applicationContext, "基础地址变更，已清空已领取配置: $oldBase -> $base")
                 toast("服务器地址已变更，请重新扫码绑定")
             } else {
-                MobileLogStore.info(applicationContext, "base url saved (keep claim): $base")
+                MobileLogStore.info(applicationContext, "基础地址已保存（保留已领取配置）: $base")
                 toast("已保存")
             }
             refreshUi()
@@ -189,7 +189,7 @@ class MainActivity : AppCompatActivity() {
         val base = resolveBaseUrlFromInput()
         if (base.isBlank()) {
             binding.tvConnectionTest.text = "测试失败：缺少服务器地址"
-            MobileLogStore.warn(applicationContext, "test connection failed: missing base URL")
+            MobileLogStore.warn(applicationContext, "连接测试失败：缺少服务器地址")
             return
         }
 
@@ -250,7 +250,7 @@ class MainActivity : AppCompatActivity() {
                 }
                 MobileLogStore.info(
                     applicationContext,
-                    "test connection done: health=$healthOk statusApi=${status != null} ping=${pingStatus != null}"
+                    "连接测试完成: health=$healthOk statusApi=${status != null} ping=${pingStatus != null}"
                 )
                 refreshLogs()
             }
@@ -264,7 +264,7 @@ class MainActivity : AppCompatActivity() {
             val settings = NotifyApi.getSettings(base)
             runOnUiThread {
                 if (settings == null) {
-                    MobileLogStore.warn(applicationContext, "load settings failed")
+                    MobileLogStore.warn(applicationContext, "加载设置失败")
                     toast("加载设置失败")
                     return@runOnUiThread
                 }
@@ -301,11 +301,11 @@ class MainActivity : AppCompatActivity() {
             val saved = NotifyApi.saveSettings(base, payload)
             runOnUiThread {
                 if (saved == null) {
-                    MobileLogStore.warn(applicationContext, "save settings failed")
+                    MobileLogStore.warn(applicationContext, "保存设置失败")
                     toast("保存设置失败")
                     return@runOnUiThread
                 }
-                MobileLogStore.info(applicationContext, "settings saved")
+                MobileLogStore.info(applicationContext, "设置已保存")
                 toast("设置已保存")
                 loadStats()
                 refreshLogs()
@@ -357,14 +357,14 @@ class MainActivity : AppCompatActivity() {
         io.execute {
             val approved = NotifyApi.approvePairing(baseUrl, token)
             if (!approved) {
-                MobileLogStore.warn(applicationContext, "pair approve failed")
+                MobileLogStore.warn(applicationContext, "绑定确认失败")
                 runOnUiThread { toast("绑定确认失败") }
                 return@execute
             }
 
             val claim = NotifyApi.autoClaim(baseUrl, store.getDeviceId(), store.getDeviceName())
             if (claim == null) {
-                MobileLogStore.warn(applicationContext, "pair auto-claim failed")
+                MobileLogStore.warn(applicationContext, "领取配置失败")
                 runOnUiThread { toast("领取配置失败") }
                 return@execute
             }
@@ -375,7 +375,7 @@ class MainActivity : AppCompatActivity() {
 
             runOnUiThread {
                 binding.etBaseUrl.setText(baseUrl)
-                MobileLogStore.info(applicationContext, "pair success: $baseUrl")
+                MobileLogStore.info(applicationContext, "绑定成功: $baseUrl")
                 refreshUi()
                 toast("绑定成功")
                 testConnection()
@@ -434,7 +434,17 @@ class MainActivity : AppCompatActivity() {
 
     private fun openBatterySettings() {
         val packageUri = Uri.parse("package:$packageName")
-        val candidates = listOf(
+        val brand = Build.MANUFACTURER.lowercase()
+        val candidates = mutableListOf<Intent>()
+
+        if (brand.contains("vivo") || brand.contains("iqoo")) {
+            candidates.add(Intent().setComponent(ComponentName("com.vivo.abe", "com.vivo.applicationbehaviorengine.ui.ExcessivePowerManagerActivity")))
+            candidates.add(Intent().setComponent(ComponentName("com.vivo.permissionmanager", "com.vivo.permissionmanager.activity.BgStartUpManagerActivity")))
+            candidates.add(Intent().setComponent(ComponentName("com.iqoo.secure", "com.iqoo.secure.ui.phoneoptimize.BgStartUpManager")))
+            candidates.add(Intent().setComponent(ComponentName("com.iqoo.secure", "com.iqoo.secure.MainActivity")))
+        }
+
+        candidates.addAll(listOf(
             Intent("android.settings.APP_BATTERY_SETTINGS").apply {
                 putExtra("package_name", packageName)
                 data = packageUri
@@ -449,18 +459,23 @@ class MainActivity : AppCompatActivity() {
             Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS),
             Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, packageUri),
             Intent(Settings.ACTION_SETTINGS)
-        )
+        ))
 
         for (intent in candidates) {
             try {
                 if (intent.resolveActivity(packageManager) != null) {
                     startActivity(intent)
+                    MobileLogStore.info(
+                        applicationContext,
+                        "已打开电池/后台设置: action=${intent.action ?: "-"} component=${intent.component?.flattenToShortString() ?: "-"}"
+                    )
                     return
                 }
             } catch (_: Throwable) {
                 // try next
             }
         }
+        MobileLogStore.warn(applicationContext, "电池后台设置跳转失败，品牌=$brand")
         toast("无法打开电池后台设置")
     }
 

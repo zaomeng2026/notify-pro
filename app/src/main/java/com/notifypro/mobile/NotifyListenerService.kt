@@ -64,7 +64,7 @@ class NotifyListenerService : NotificationListenerService() {
     override fun onCreate() {
         super.onCreate()
         store = ConfigStore(applicationContext)
-        logInfo("service created")
+        logInfo("服务已创建")
         infraExecutor.scheduleWithFixedDelay({ safeEnsureConfig(false) }, 2, 10, TimeUnit.SECONDS)
         infraExecutor.scheduleWithFixedDelay({ safePing() }, 10, 60, TimeUnit.SECONDS)
         ioExecutor.scheduleWithFixedDelay({ safeFlushQueue() }, 8, 8, TimeUnit.SECONDS)
@@ -78,7 +78,7 @@ class NotifyListenerService : NotificationListenerService() {
 
     override fun onListenerConnected() {
         super.onListenerConnected()
-        logInfo("notification listener connected")
+        logInfo("通知监听服务已连接")
         infraExecutor.execute { safeEnsureConfig(false) }
         ioExecutor.execute { safeFlushQueue() }
     }
@@ -115,7 +115,10 @@ class NotifyListenerService : NotificationListenerService() {
         )
 
         logInfo(
-            "payment notification matched: channel=${payload.channel} amount=${payload.amount ?: "-"} msgId=${payload.clientMsgId}"
+            "抓取通知详情: 包名=$pkg 标题=${compactLogText(title)} 内容=${compactLogText(text)} 通知ID=${sbn.id} postTime=${sbn.postTime} key=${compactLogText(sbn.key ?: "")}"
+        )
+        logInfo(
+            "匹配到收款通知: 渠道=${payload.channel} 金额=${payload.amount ?: "-"} 消息ID=${payload.clientMsgId}"
         )
 
         ioExecutor.execute {
@@ -127,17 +130,17 @@ class NotifyListenerService : NotificationListenerService() {
         val apiUrl = store.getApiUrl()
         if (apiUrl.isBlank()) {
             enqueue(payload)
-            logWarn("queued(no-config) msgId=${payload.clientMsgId}")
+            logWarn("已入队(未配置API) 消息ID=${payload.clientMsgId}")
             requestEnsureConfig()
             return
         }
 
         if (postPayload(payload)) {
-            logInfo("notify sent msgId=${payload.clientMsgId}")
+            logInfo("上报成功 消息ID=${payload.clientMsgId}")
             return
         }
         enqueue(payload)
-        logWarn("queued(send-fail) msgId=${payload.clientMsgId}")
+        logWarn("已入队(上报失败) 消息ID=${payload.clientMsgId}")
         requestEnsureConfig()
     }
 
@@ -157,10 +160,10 @@ class NotifyListenerService : NotificationListenerService() {
                 deviceId = payload.deviceId,
                 deviceName = payload.deviceName
             )
-            if (!ok) logWarn("notify fail msgId=${payload.clientMsgId}")
+            if (!ok) logWarn("上报失败 消息ID=${payload.clientMsgId}")
             ok
         } catch (e: Throwable) {
-            logWarn("notify error: ${e.message}")
+            logWarn("上报异常: ${e.message}")
             false
         }
     }
@@ -203,14 +206,14 @@ class NotifyListenerService : NotificationListenerService() {
                 }
                 saveQueue(remain)
                 if (sent > 0) {
-                    logInfo("retry-sent=$sent dropped=$dropped remain=${remain.size}")
+                    logInfo("重试发送成功=$sent 丢弃=$dropped 剩余=${remain.size}")
                 }
                 if (sent <= 0 && dropped > 0) {
-                    logWarn("retry-dropped=$dropped remain=${remain.size}")
+                    logWarn("重试丢弃=$dropped 剩余=${remain.size}")
                 }
             }
         } catch (e: Throwable) {
-            logWarn("flush queue fail: ${e.message}")
+            logWarn("离线队列刷新失败: ${e.message}")
         }
     }
 
@@ -225,11 +228,11 @@ class NotifyListenerService : NotificationListenerService() {
                 deviceName = store.getDeviceName()
             )
             if (!ok) {
-                logWarn("ping failed, token/config may be invalid")
+                logWarn("心跳失败，可能是配置或令牌失效")
                 safeEnsureConfig(true)
             }
         } catch (e: Throwable) {
-            logWarn("ping fail: ${e.message}")
+            logWarn("心跳异常: ${e.message}")
         }
     }
 
@@ -252,15 +255,15 @@ class NotifyListenerService : NotificationListenerService() {
 
                 val claim = NotifyApi.autoClaim(base, store.getDeviceId(), store.getDeviceName()) ?: run {
                     if (forceReclaim) {
-                        logWarn("re-claim failed, please scan QR to bind again")
+                        logWarn("重新领取配置失败，请重新扫码绑定")
                     }
                     return
                 }
                 store.setApiUrl(claim.apiUrl)
                 store.setAuthToken(claim.authToken)
-                logInfo("auto-claim ok => ${claim.apiUrl}")
+                logInfo("自动领取配置成功: ${claim.apiUrl}")
             } catch (e: Throwable) {
-                logWarn("ensure config fail: ${e.message}")
+                logWarn("配置自检失败: ${e.message}")
             }
         }
     }
@@ -366,6 +369,14 @@ class NotifyListenerService : NotificationListenerService() {
             if (v != null) return v
         }
         return null
+    }
+
+    private fun compactLogText(text: String): String {
+        return text
+            .replace("\r", "")
+            .replace("\n", "\\n")
+            .trim()
+            .take(1600)
     }
 
     private fun buildDedupeKey(sbn: StatusBarNotification, pkg: String, title: String, text: String): String {

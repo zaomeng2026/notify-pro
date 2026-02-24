@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="mobile-web-app-capable" content="yes" />
-  <title>Payment Display</title>
+  <title>收款数据同步大屏</title>
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
@@ -68,11 +68,24 @@
         </section>
       </section>
 
-      <aside class="qr-panel">
-        <div class="qr-box">
-          <img id="qr-image" alt="personal qr" style="display:none;" />
-          <div class="qr-empty" id="qr-empty">No personal QR configured</div>
+      <aside class="qr-panel" id="qr-panel">
+        <div class="qr-grid" id="qr-grid">
+          <div class="qr-item">
+            <div class="qr-title" id="qr-wechat-title">微信收款码</div>
+            <div class="qr-box">
+              <img id="qr-wechat-image" alt="wechat qr" style="display:none;" />
+              <div class="qr-empty" id="qr-wechat-empty">未设置微信收款码</div>
+            </div>
+          </div>
+          <div class="qr-item">
+            <div class="qr-title" id="qr-alipay-title">支付宝收款码</div>
+            <div class="qr-box">
+              <img id="qr-alipay-image" alt="alipay qr" style="display:none;" />
+              <div class="qr-empty" id="qr-alipay-empty">未设置支付宝收款码</div>
+            </div>
+          </div>
         </div>
+        <div class="qr-hidden" id="qr-hidden-text" style="display:none;">支付码展示已关闭</div>
         <button class="btn" id="btn-fs">Fullscreen</button>
       </aside>
     </main>
