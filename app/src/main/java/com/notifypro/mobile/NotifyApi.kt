@@ -18,6 +18,27 @@ object NotifyApi {
         val authToken: String
     )
 
+    data class FeatureConfig(
+        val voiceBroadcastEnabled: Boolean,
+        val showTotalAmount: Boolean,
+        val showTodayAmount: Boolean
+    )
+
+    data class ShopSettings(
+        val shopName: String,
+        val notice: String,
+        val qrCodeUrl: String,
+        val contact: String,
+        val feature: FeatureConfig
+    )
+
+    data class Snapshot(
+        val totalCount: Int,
+        val totalAmount: Double,
+        val todayCount: Int,
+        val todayAmount: Double
+    )
+
     fun isHealthOk(url: String, timeoutMs: Int = 2500): Boolean {
         val base = ConfigStore.normalizeBaseUrl(url)
         if (base.isBlank()) return false
@@ -49,6 +70,84 @@ object NotifyApi {
             apiUrl = apiUrl,
             authToken = config.optString("authToken", "")
         )
+    }
+
+    fun approvePairing(baseUrl: String, token: String): Boolean {
+        val base = ConfigStore.normalizeBaseUrl(baseUrl)
+        if (base.isBlank() || token.isBlank()) return false
+        val body = JSONObject().put("token", token)
+        return try {
+            val (code, text) = request("POST", "$base/api/pairing/approve", body.toString(), null, 5000)
+            if (code != 200 || text.isBlank()) return false
+            JSONObject(text).optBoolean("ok", false)
+        } catch (e: Throwable) {
+            Log.w(TAG, "approvePairing fail: ${e.message}")
+            false
+        }
+    }
+
+    fun getSettings(baseUrl: String): ShopSettings? {
+        val base = ConfigStore.normalizeBaseUrl(baseUrl)
+        if (base.isBlank()) return null
+        return try {
+            val (code, text) = request("GET", "$base/api/settings", null, null, 5000)
+            if (code != 200 || text.isBlank()) return null
+            val json = JSONObject(text)
+            if (!json.optBoolean("ok", false)) return null
+            parseSettings(json.optJSONObject("settings"))
+        } catch (e: Throwable) {
+            Log.w(TAG, "getSettings fail: ${e.message}")
+            null
+        }
+    }
+
+    fun saveSettings(baseUrl: String, settings: ShopSettings): ShopSettings? {
+        val base = ConfigStore.normalizeBaseUrl(baseUrl)
+        if (base.isBlank()) return null
+        val body = JSONObject()
+            .put("shopName", settings.shopName)
+            .put("notice", settings.notice)
+            .put("qrCodeUrl", settings.qrCodeUrl)
+            .put("contact", settings.contact)
+            .put(
+                "feature",
+                JSONObject()
+                    .put("voiceBroadcastEnabled", settings.feature.voiceBroadcastEnabled)
+                    .put("showTotalAmount", settings.feature.showTotalAmount)
+                    .put("showTodayAmount", settings.feature.showTodayAmount)
+            )
+        return try {
+            val (code, text) = request("POST", "$base/api/settings", body.toString(), null, 5000)
+            if (code != 200 || text.isBlank()) return null
+            val json = JSONObject(text)
+            if (!json.optBoolean("ok", false)) return null
+            parseSettings(json.optJSONObject("settings"))
+        } catch (e: Throwable) {
+            Log.w(TAG, "saveSettings fail: ${e.message}")
+            null
+        }
+    }
+
+    fun getSnapshot(baseUrl: String, limit: Int = 200): Snapshot? {
+        val base = ConfigStore.normalizeBaseUrl(baseUrl)
+        if (base.isBlank()) return null
+        val safeLimit = limit.coerceIn(1, 500)
+        return try {
+            val (code, text) = request("GET", "$base/api/records?limit=$safeLimit", null, null, 5000)
+            if (code != 200 || text.isBlank()) return null
+            val json = JSONObject(text)
+            if (!json.optBoolean("ok", false)) return null
+            val s = json.optJSONObject("snapshot") ?: return null
+            Snapshot(
+                totalCount = s.optInt("totalCount", 0),
+                totalAmount = s.optDouble("totalAmount", 0.0),
+                todayCount = s.optInt("todayCount", 0),
+                todayAmount = s.optDouble("todayAmount", 0.0)
+            )
+        } catch (e: Throwable) {
+            Log.w(TAG, "getSnapshot fail: ${e.message}")
+            null
+        }
     }
 
     fun postNotify(
@@ -108,6 +207,22 @@ object NotifyApi {
         } catch (_: Throwable) {
             null
         }
+    }
+
+    private fun parseSettings(json: JSONObject?): ShopSettings? {
+        json ?: return null
+        val f = json.optJSONObject("feature")
+        return ShopSettings(
+            shopName = json.optString("shopName", ""),
+            notice = json.optString("notice", ""),
+            qrCodeUrl = json.optString("qrCodeUrl", ""),
+            contact = json.optString("contact", ""),
+            feature = FeatureConfig(
+                voiceBroadcastEnabled = f?.optBoolean("voiceBroadcastEnabled", false) ?: false,
+                showTotalAmount = f?.optBoolean("showTotalAmount", true) ?: true,
+                showTodayAmount = f?.optBoolean("showTodayAmount", true) ?: true
+            )
+        )
     }
 
     private fun request(
