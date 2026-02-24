@@ -86,10 +86,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         binding.btnOpenBattery.setOnClickListener {
-            openIntentSafely(
-                Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS),
-                Intent(Settings.ACTION_SETTINGS)
-            )
+            openBatterySettings()
         }
 
         binding.btnOpenAdmin.setOnClickListener {
@@ -399,6 +396,38 @@ class MainActivity : AppCompatActivity() {
         } catch (_: Throwable) {
             toast("Cannot open settings")
         }
+    }
+
+    private fun openBatterySettings() {
+        val packageUri = Uri.parse("package:$packageName")
+        val candidates = listOf(
+            Intent("android.settings.APP_BATTERY_SETTINGS").apply {
+                putExtra("package_name", packageName)
+                data = packageUri
+            },
+            Intent("android.settings.APP_BATTERY_SAVER_SETTINGS").apply {
+                putExtra("package_name", packageName)
+                data = packageUri
+            },
+            Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                data = packageUri
+            },
+            Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS),
+            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, packageUri),
+            Intent(Settings.ACTION_SETTINGS)
+        )
+
+        for (intent in candidates) {
+            try {
+                if (intent.resolveActivity(packageManager) != null) {
+                    startActivity(intent)
+                    return
+                }
+            } catch (_: Throwable) {
+                // try next
+            }
+        }
+        toast("Cannot open battery settings")
     }
 
     private fun toast(msg: String) {
