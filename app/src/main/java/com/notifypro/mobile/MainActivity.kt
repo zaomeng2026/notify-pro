@@ -76,6 +76,8 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        binding.btnTestConnection.setOnClickListener { testConnection() }
+
         binding.btnOpenNotifyAccess.setOnClickListener {
             openIntentSafely(
                 Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS),
@@ -104,6 +106,7 @@ class MainActivity : AppCompatActivity() {
         binding.btnSaveSettings.setOnClickListener { saveSettings() }
 
         refreshUi()
+        testConnection()
         loadStats()
         loadSettings()
     }
@@ -163,6 +166,69 @@ class MainActivity : AppCompatActivity() {
                     append("Today amount: ${snapshot.todayAmount}\n")
                     append("Total count: ${snapshot.totalCount}\n")
                     append("Total amount: ${snapshot.totalAmount}")
+                }
+            }
+        }
+    }
+
+    private fun testConnection() {
+        val base = resolveBaseUrlFromInput()
+        if (base.isBlank()) {
+            binding.tvConnectionTest.text = "Test failed: missing base URL"
+            return
+        }
+
+        binding.tvConnectionTest.text = "Testing..."
+        io.execute {
+            val healthOk = NotifyApi.isHealthOk(base, 2500)
+            val status = NotifyApi.getConnectionStatus(base)
+
+            val apiUrl = store.getApiUrl()
+            val pingStatus = if (apiUrl.isNotBlank()) {
+                NotifyApi.pingAndGetStatus(
+                    baseApiUrl = apiUrl,
+                    authToken = store.getAuthToken(),
+                    deviceId = store.getDeviceId(),
+                    deviceName = store.getDeviceName()
+                )
+            } else {
+                null
+            }
+
+            runOnUiThread {
+                binding.tvConnectionTest.text = buildString {
+                    append("Health: ")
+                    append(if (healthOk) "OK" else "FAIL")
+                    append('\n')
+
+                    append("Status API: ")
+                    if (status == null) {
+                        append("FAIL")
+                    } else {
+                        append(if (status.online) "ONLINE" else "OFFLINE")
+                        append(" | devices=")
+                        append(status.deviceCount)
+                        if (status.lastDeviceName.isNotBlank()) {
+                            append(" | last=")
+                            append(status.lastDeviceName)
+                        }
+                        if (status.lastIp.isNotBlank()) {
+                            append(" | ip=")
+                            append(status.lastIp)
+                        }
+                    }
+                    append('\n')
+
+                    append("Ping(API token): ")
+                    if (apiUrl.isBlank()) {
+                        append("SKIP (apiUrl empty)")
+                    } else {
+                        append(if (pingStatus != null) "OK" else "FAIL")
+                        if (pingStatus != null) {
+                            append(" | online=")
+                            append(if (pingStatus.online) "yes" else "no")
+                        }
+                    }
                 }
             }
         }
@@ -282,6 +348,7 @@ class MainActivity : AppCompatActivity() {
                 binding.etBaseUrl.setText(baseUrl)
                 refreshUi()
                 toast("Pair success")
+                testConnection()
                 loadStats()
                 loadSettings()
             }

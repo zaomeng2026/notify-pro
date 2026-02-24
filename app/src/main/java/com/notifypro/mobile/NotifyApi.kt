@@ -39,6 +39,14 @@ object NotifyApi {
         val todayAmount: Double
     )
 
+    data class ConnectionStatus(
+        val online: Boolean,
+        val deviceCount: Int,
+        val lastSeenText: String,
+        val lastDeviceName: String,
+        val lastIp: String
+    )
+
     fun isHealthOk(url: String, timeoutMs: Int = 2500): Boolean {
         val base = ConfigStore.normalizeBaseUrl(url)
         if (base.isBlank()) return false
@@ -199,6 +207,41 @@ object NotifyApi {
         request("POST", "$root/api/device/ping", body.toString(), headers, 3500)
     }
 
+    fun getConnectionStatus(baseUrl: String): ConnectionStatus? {
+        val base = ConfigStore.normalizeBaseUrl(baseUrl)
+        if (base.isBlank()) return null
+        return try {
+            val (code, text) = request("GET", "$base/api/connection/status", null, null, 5000)
+            if (code != 200 || text.isBlank()) return null
+            val json = JSONObject(text)
+            if (!json.optBoolean("ok", false)) return null
+            parseConnectionStatus(json.optJSONObject("status"))
+        } catch (e: Throwable) {
+            Log.w(TAG, "getConnectionStatus fail: ${e.message}")
+            null
+        }
+    }
+
+    fun pingAndGetStatus(baseApiUrl: String, authToken: String, deviceId: String, deviceName: String): ConnectionStatus? {
+        val root = extractRoot(baseApiUrl) ?: return null
+        val body = JSONObject()
+            .put("deviceId", deviceId)
+            .put("deviceName", deviceName)
+            .put("platform", "android")
+        val headers = mutableMapOf<String, String>()
+        if (authToken.isNotBlank()) headers["X-Auth-Token"] = authToken
+        return try {
+            val (code, text) = request("POST", "$root/api/device/ping", body.toString(), headers, 5000)
+            if (code != 200 || text.isBlank()) return null
+            val json = JSONObject(text)
+            if (!json.optBoolean("ok", false)) return null
+            parseConnectionStatus(json.optJSONObject("status"))
+        } catch (e: Throwable) {
+            Log.w(TAG, "pingAndGetStatus fail: ${e.message}")
+            null
+        }
+    }
+
     private fun extractRoot(apiUrl: String): String? {
         return try {
             val u = URL(apiUrl)
@@ -222,6 +265,17 @@ object NotifyApi {
                 showTotalAmount = f?.optBoolean("showTotalAmount", true) ?: true,
                 showTodayAmount = f?.optBoolean("showTodayAmount", true) ?: true
             )
+        )
+    }
+
+    private fun parseConnectionStatus(json: JSONObject?): ConnectionStatus? {
+        json ?: return null
+        return ConnectionStatus(
+            online = json.optBoolean("online", false),
+            deviceCount = json.optInt("deviceCount", 0),
+            lastSeenText = json.optString("lastSeenText", ""),
+            lastDeviceName = json.optString("lastDeviceName", ""),
+            lastIp = json.optString("lastIp", "")
         )
     }
 
