@@ -28,13 +28,13 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="14dp"
-            android:text="Server Base URL" />
+            android:text="@string/label_base_url" />
 
         <EditText
             android:id="@+id/etBaseUrl"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="http://192.168.1.10:3180"
+            android:hint="@string/hint_base_url"
             android:inputType="textUri"
             android:maxLines="1" />
 
@@ -43,21 +43,21 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="Save Base URL" />
+            android:text="@string/btn_save" />
 
         <Button
             android:id="@+id/btnTestConnection"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="Test Connection" />
+            android:text="@string/btn_test_connection" />
 
         <TextView
             android:id="@+id/tvConnectionTest"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
-            android:text="Not tested"
+            android:text="@string/text_not_tested"
             android:textIsSelectable="true" />
 
         <Button
@@ -65,7 +65,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="Scan Pair QR" />
+            android:text="@string/btn_scan_pair" />
 
         <Button
             android:id="@+id/btnOpenNotifyAccess"
@@ -92,7 +92,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="14dp"
-            android:text="Stats"
+            android:text="@string/section_stats"
             android:textStyle="bold" />
 
         <TextView
@@ -100,7 +100,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
-            android:text="Not loaded"
+            android:text="@string/text_not_loaded"
             android:textIsSelectable="true" />
 
         <Button
@@ -108,13 +108,13 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="Refresh Stats" />
+            android:text="@string/btn_refresh_stats" />
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="14dp"
-            android:text="Shop Settings"
+            android:text="@string/section_shop_settings"
             android:textStyle="bold" />
 
         <EditText
@@ -122,7 +122,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:hint="Shop Name"
+            android:hint="@string/hint_shop_name"
             android:inputType="text" />
 
         <EditText
@@ -130,7 +130,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:hint="Notice"
+            android:hint="@string/hint_notice"
             android:inputType="textMultiLine"
             android:minLines="2" />
 
@@ -139,7 +139,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:hint="Personal QR Image URL"
+            android:hint="@string/hint_qr_url"
             android:inputType="textUri" />
 
         <EditText
@@ -147,7 +147,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:hint="Contact"
+            android:hint="@string/hint_contact"
             android:inputType="text" />
 
         <Switch
@@ -155,39 +155,39 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="Voice Broadcast" />
+            android:text="@string/sw_voice_broadcast" />
 
         <Switch
             android:id="@+id/swShowTotal"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Show Total Amount" />
+            android:text="@string/sw_show_total" />
 
         <Switch
             android:id="@+id/swShowToday"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Show Today Amount" />
+            android:text="@string/sw_show_today" />
 
         <Button
             android:id="@+id/btnLoadSettings"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="Load Settings" />
+            android:text="@string/btn_load_settings" />
 
         <Button
             android:id="@+id/btnSaveSettings"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="Save Settings" />
+            android:text="@string/btn_save_settings" />
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="14dp"
-            android:text="Runtime Logs"
+            android:text="@string/section_runtime_logs"
             android:textStyle="bold" />
 
         <Button
@@ -195,14 +195,14 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="Refresh Logs" />
+            android:text="@string/btn_refresh_logs" />
 
         <Button
             android:id="@+id/btnClearLogs"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="Clear Logs" />
+            android:text="@string/btn_clear_logs" />
 
         <TextView
             android:id="@+id/tvLogs"
@@ -211,7 +211,7 @@
             android:layout_marginTop="8dp"
             android:fontFamily="monospace"
             android:minLines="8"
-            android:text="No logs"
+            android:text="@string/text_no_logs"
             android:textIsSelectable="true"
             android:textSize="12sp" />
     </LinearLayout>

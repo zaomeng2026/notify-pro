@@ -26,12 +26,12 @@ class MainActivity : AppCompatActivity() {
     private val scanLauncher = registerForActivityResult(ScanContract()) { result ->
         val content = result.contents?.trim().orEmpty()
         if (content.isBlank()) {
-            toast("Scan canceled")
+            toast("已取消扫码")
             return@registerForActivityResult
         }
         val pair = parsePairUrl(content)
         if (pair == null) {
-            toast("Invalid pair QR")
+            toast("二维码无效")
             return@registerForActivityResult
         }
         approveAndClaim(pair.baseUrl, pair.token)
@@ -40,7 +40,7 @@ class MainActivity : AppCompatActivity() {
     private val cameraPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
             if (!granted) {
-                toast("Camera permission denied")
+                toast("未授予相机权限")
                 return@registerForActivityResult
             }
             startQrScan()
@@ -59,14 +59,14 @@ class MainActivity : AppCompatActivity() {
         binding.btnSave.setOnClickListener {
             val base = resolveBaseUrlFromInput()
             if (base.isBlank()) {
-                toast("Please input valid server URL")
+                toast("请输入正确的服务器地址")
                 return@setOnClickListener
             }
             store.setBaseUrl(base)
             store.clearRemoteConfig()
             MobileLogStore.info(applicationContext, "base url saved: $base")
             refreshUi()
-            toast("Saved")
+            toast("已保存")
         }
 
         binding.btnScanPair.setOnClickListener {
@@ -93,7 +93,7 @@ class MainActivity : AppCompatActivity() {
         binding.btnOpenAdmin.setOnClickListener {
             val base = resolveBaseUrlFromInput()
             if (base.isBlank()) {
-                toast("Please input valid server URL")
+                toast("请输入正确的服务器地址")
                 return@setOnClickListener
             }
             openUrlSafely("$base/admin")
@@ -106,7 +106,7 @@ class MainActivity : AppCompatActivity() {
         binding.btnClearLogs.setOnClickListener {
             MobileLogStore.clear(applicationContext)
             refreshLogs()
-            toast("Logs cleared")
+            toast("日志已清空")
         }
 
         refreshUi()
@@ -133,45 +133,45 @@ class MainActivity : AppCompatActivity() {
         val queueSize = store.getPendingQueueSize()
         val versionName = getAppVersionName()
         binding.tvStatus.text = buildString {
-            append("Notify listener: ")
-            append(if (listenerEnabled) "enabled" else "disabled")
+            append("通知监听：")
+            append(if (listenerEnabled) "已开启" else "未开启")
             append('\n')
-            append("Base URL: ")
+            append("基础地址：")
             append(store.getBaseUrl().ifBlank { "-" })
             append('\n')
-            append("API URL: ")
+            append("接口地址：")
             append(apiUrl.ifBlank { "-" })
             append('\n')
-            append("Offline queue: ")
+            append("离线队列：")
             append(queueSize)
             append('\n')
-            append("Device ID: ")
+            append("设备ID：")
             append(store.getDeviceId())
             append('\n')
-            append("Version: $versionName")
+            append("版本：$versionName")
             append('\n')
-            append("Android: ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})")
+            append("安卓：${Build.VERSION.RELEASE}（API ${Build.VERSION.SDK_INT}）")
         }
     }
 
     private fun loadStats() {
         val base = resolveBaseUrlFromInput()
         if (base.isBlank()) {
-            binding.tvStats.text = "Not loaded (missing base URL)"
+            binding.tvStats.text = "未加载（缺少服务器地址）"
             return
         }
         io.execute {
             val snapshot = NotifyApi.getSnapshot(base)
             runOnUiThread {
                 if (snapshot == null) {
-                    binding.tvStats.text = "Load stats failed"
+                    binding.tvStats.text = "加载统计失败"
                     return@runOnUiThread
                 }
                 binding.tvStats.text = buildString {
-                    append("Today count: ${snapshot.todayCount}\n")
-                    append("Today amount: ${snapshot.todayAmount}\n")
-                    append("Total count: ${snapshot.totalCount}\n")
-                    append("Total amount: ${snapshot.totalAmount}")
+                    append("今日笔数：${snapshot.todayCount}\n")
+                    append("今日金额：${snapshot.todayAmount}\n")
+                    append("总笔数：${snapshot.totalCount}\n")
+                    append("总金额：${snapshot.totalAmount}")
                 }
             }
         }
@@ -180,12 +180,12 @@ class MainActivity : AppCompatActivity() {
     private fun testConnection() {
         val base = resolveBaseUrlFromInput()
         if (base.isBlank()) {
-            binding.tvConnectionTest.text = "Test failed: missing base URL"
+            binding.tvConnectionTest.text = "测试失败：缺少服务器地址"
             MobileLogStore.warn(applicationContext, "test connection failed: missing base URL")
             return
         }
 
-        binding.tvConnectionTest.text = "Testing..."
+        binding.tvConnectionTest.text = "测试中..."
         io.execute {
             val healthOk = NotifyApi.isHealthOk(base, 2500)
             val status = NotifyApi.getConnectionStatus(base)
@@ -204,36 +204,36 @@ class MainActivity : AppCompatActivity() {
 
             runOnUiThread {
                 binding.tvConnectionTest.text = buildString {
-                    append("Health: ")
-                    append(if (healthOk) "OK" else "FAIL")
+                    append("健康检查：")
+                    append(if (healthOk) "正常" else "失败")
                     append('\n')
 
-                    append("Status API: ")
+                    append("连接状态接口：")
                     if (status == null) {
-                        append("FAIL")
+                        append("失败")
                     } else {
-                        append(if (status.online) "ONLINE" else "OFFLINE")
-                        append(" | devices=")
+                        append(if (status.online) "在线" else "离线")
+                        append(" | 设备数=")
                         append(status.deviceCount)
                         if (status.lastDeviceName.isNotBlank()) {
-                            append(" | last=")
+                            append(" | 最近设备=")
                             append(status.lastDeviceName)
                         }
                         if (status.lastIp.isNotBlank()) {
-                            append(" | ip=")
+                            append(" | IP=")
                             append(status.lastIp)
                         }
                     }
                     append('\n')
 
-                    append("Ping(API token): ")
+                    append("Ping（带Token）：")
                     if (apiUrl.isBlank()) {
-                        append("SKIP (apiUrl empty)")
+                        append("跳过（API地址为空）")
                     } else {
-                        append(if (pingStatus != null) "OK" else "FAIL")
+                        append(if (pingStatus != null) "成功" else "失败")
                         if (pingStatus != null) {
-                            append(" | online=")
-                            append(if (pingStatus.online) "yes" else "no")
+                            append(" | 在线=")
+                            append(if (pingStatus.online) "是" else "否")
                         }
                     }
                 }
@@ -254,7 +254,7 @@ class MainActivity : AppCompatActivity() {
             runOnUiThread {
                 if (settings == null) {
                     MobileLogStore.warn(applicationContext, "load settings failed")
-                    toast("Load settings failed")
+                    toast("加载设置失败")
                     return@runOnUiThread
                 }
                 binding.etShopName.setText(settings.shopName)
@@ -271,7 +271,7 @@ class MainActivity : AppCompatActivity() {
     private fun saveSettings() {
         val base = resolveBaseUrlFromInput()
         if (base.isBlank()) {
-            toast("Please input valid server URL")
+            toast("请输入正确的服务器地址")
             return
         }
         val payload = NotifyApi.ShopSettings(
@@ -291,11 +291,11 @@ class MainActivity : AppCompatActivity() {
             runOnUiThread {
                 if (saved == null) {
                     MobileLogStore.warn(applicationContext, "save settings failed")
-                    toast("Save settings failed")
+                    toast("保存设置失败")
                     return@runOnUiThread
                 }
                 MobileLogStore.info(applicationContext, "settings saved")
-                toast("Settings saved")
+                toast("设置已保存")
                 loadStats()
                 refreshLogs()
             }
@@ -305,7 +305,7 @@ class MainActivity : AppCompatActivity() {
     private fun startQrScan() {
         val options = ScanOptions()
         options.setDesiredBarcodeFormats(ScanOptions.QR_CODE)
-        options.setPrompt("Scan pair QR from admin page")
+        options.setPrompt("请扫描后台页面的绑定二维码")
         options.setBeepEnabled(true)
         options.setOrientationLocked(false)
         scanLauncher.launch(options)
@@ -342,19 +342,19 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun approveAndClaim(baseUrl: String, token: String) {
-        toast("Pairing in progress...")
+        toast("正在绑定，请稍候...")
         io.execute {
             val approved = NotifyApi.approvePairing(baseUrl, token)
             if (!approved) {
                 MobileLogStore.warn(applicationContext, "pair approve failed")
-                runOnUiThread { toast("Approve failed") }
+                runOnUiThread { toast("绑定确认失败") }
                 return@execute
             }
 
             val claim = NotifyApi.autoClaim(baseUrl, store.getDeviceId(), store.getDeviceName())
             if (claim == null) {
                 MobileLogStore.warn(applicationContext, "pair auto-claim failed")
-                runOnUiThread { toast("Claim failed") }
+                runOnUiThread { toast("领取配置失败") }
                 return@execute
             }
 
@@ -366,7 +366,7 @@ class MainActivity : AppCompatActivity() {
                 binding.etBaseUrl.setText(baseUrl)
                 MobileLogStore.info(applicationContext, "pair success: $baseUrl")
                 refreshUi()
-                toast("Pair success")
+                toast("绑定成功")
                 testConnection()
                 loadStats()
                 loadSettings()
@@ -401,9 +401,9 @@ class MainActivity : AppCompatActivity() {
         try {
             startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
         } catch (_: ActivityNotFoundException) {
-            toast("No browser found")
+            toast("未找到可用浏览器")
         } catch (_: Throwable) {
-            toast("Open failed")
+            toast("打开失败")
         }
     }
 
@@ -417,7 +417,7 @@ class MainActivity : AppCompatActivity() {
         try {
             startActivity(fallback)
         } catch (_: Throwable) {
-            toast("Cannot open settings")
+            toast("无法打开系统设置")
         }
     }
 
@@ -450,7 +450,7 @@ class MainActivity : AppCompatActivity() {
                 // try next
             }
         }
-        toast("Cannot open battery settings")
+        toast("无法打开电池后台设置")
     }
 
     private fun refreshLogs() {
