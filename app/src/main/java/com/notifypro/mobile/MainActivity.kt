@@ -64,6 +64,7 @@ class MainActivity : AppCompatActivity() {
             }
             store.setBaseUrl(base)
             store.clearRemoteConfig()
+            MobileLogStore.info(applicationContext, "base url saved: $base")
             refreshUi()
             toast("Saved")
         }
@@ -101,16 +102,24 @@ class MainActivity : AppCompatActivity() {
         binding.btnLoadStats.setOnClickListener { loadStats() }
         binding.btnLoadSettings.setOnClickListener { loadSettings() }
         binding.btnSaveSettings.setOnClickListener { saveSettings() }
+        binding.btnRefreshLogs.setOnClickListener { refreshLogs() }
+        binding.btnClearLogs.setOnClickListener {
+            MobileLogStore.clear(applicationContext)
+            refreshLogs()
+            toast("Logs cleared")
+        }
 
         refreshUi()
         testConnection()
         loadStats()
         loadSettings()
+        refreshLogs()
     }
 
     override fun onResume() {
         super.onResume()
         refreshUi()
+        refreshLogs()
     }
 
     override fun onDestroy() {
@@ -172,6 +181,7 @@ class MainActivity : AppCompatActivity() {
         val base = resolveBaseUrlFromInput()
         if (base.isBlank()) {
             binding.tvConnectionTest.text = "Test failed: missing base URL"
+            MobileLogStore.warn(applicationContext, "test connection failed: missing base URL")
             return
         }
 
@@ -227,6 +237,11 @@ class MainActivity : AppCompatActivity() {
                         }
                     }
                 }
+                MobileLogStore.info(
+                    applicationContext,
+                    "test connection done: health=$healthOk statusApi=${status != null} ping=${pingStatus != null}"
+                )
+                refreshLogs()
             }
         }
     }
@@ -238,6 +253,7 @@ class MainActivity : AppCompatActivity() {
             val settings = NotifyApi.getSettings(base)
             runOnUiThread {
                 if (settings == null) {
+                    MobileLogStore.warn(applicationContext, "load settings failed")
                     toast("Load settings failed")
                     return@runOnUiThread
                 }
@@ -274,11 +290,14 @@ class MainActivity : AppCompatActivity() {
             val saved = NotifyApi.saveSettings(base, payload)
             runOnUiThread {
                 if (saved == null) {
+                    MobileLogStore.warn(applicationContext, "save settings failed")
                     toast("Save settings failed")
                     return@runOnUiThread
                 }
+                MobileLogStore.info(applicationContext, "settings saved")
                 toast("Settings saved")
                 loadStats()
+                refreshLogs()
             }
         }
     }
@@ -327,12 +346,14 @@ class MainActivity : AppCompatActivity() {
         io.execute {
             val approved = NotifyApi.approvePairing(baseUrl, token)
             if (!approved) {
+                MobileLogStore.warn(applicationContext, "pair approve failed")
                 runOnUiThread { toast("Approve failed") }
                 return@execute
             }
 
             val claim = NotifyApi.autoClaim(baseUrl, store.getDeviceId(), store.getDeviceName())
             if (claim == null) {
+                MobileLogStore.warn(applicationContext, "pair auto-claim failed")
                 runOnUiThread { toast("Claim failed") }
                 return@execute
             }
@@ -343,11 +364,13 @@ class MainActivity : AppCompatActivity() {
 
             runOnUiThread {
                 binding.etBaseUrl.setText(baseUrl)
+                MobileLogStore.info(applicationContext, "pair success: $baseUrl")
                 refreshUi()
                 toast("Pair success")
                 testConnection()
                 loadStats()
                 loadSettings()
+                refreshLogs()
             }
         }
     }
@@ -428,6 +451,10 @@ class MainActivity : AppCompatActivity() {
             }
         }
         toast("Cannot open battery settings")
+    }
+
+    private fun refreshLogs() {
+        binding.tvLogs.text = MobileLogStore.render(applicationContext, 300)
     }
 
     private fun toast(msg: String) {

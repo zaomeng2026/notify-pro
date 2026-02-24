@@ -182,5 +182,37 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:text="Save Settings" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:text="Runtime Logs"
+            android:textStyle="bold" />
+
+        <Button
+            android:id="@+id/btnRefreshLogs"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Refresh Logs" />
+
+        <Button
+            android:id="@+id/btnClearLogs"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Clear Logs" />
+
+        <TextView
+            android:id="@+id/tvLogs"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:fontFamily="monospace"
+            android:minLines="8"
+            android:text="No logs"
+            android:textIsSelectable="true"
+            android:textSize="12sp" />
     </LinearLayout>
 </ScrollView>

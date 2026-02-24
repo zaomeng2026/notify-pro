@@ -64,6 +64,7 @@ class NotifyListenerService : NotificationListenerService() {
     override fun onCreate() {
         super.onCreate()
         store = ConfigStore(applicationContext)
+        logInfo("service created")
         infraExecutor.scheduleWithFixedDelay({ safeEnsureConfig() }, 2, 10, TimeUnit.SECONDS)
         infraExecutor.scheduleWithFixedDelay({ safePing() }, 10, 60, TimeUnit.SECONDS)
         ioExecutor.scheduleWithFixedDelay({ safeFlushQueue() }, 8, 8, TimeUnit.SECONDS)
@@ -77,7 +78,7 @@ class NotifyListenerService : NotificationListenerService() {
 
     override fun onListenerConnected() {
         super.onListenerConnected()
-        Log.d(tag, "listener connected")
+        logInfo("notification listener connected")
         infraExecutor.execute { safeEnsureConfig() }
         ioExecutor.execute { safeFlushQueue() }
     }
@@ -113,6 +114,10 @@ class NotifyListenerService : NotificationListenerService() {
             deviceName = store.getDeviceName()
         )
 
+        logInfo(
+            "payment notification matched: channel=${payload.channel} amount=${payload.amount ?: "-"} msgId=${payload.clientMsgId}"
+        )
+
         ioExecutor.execute {
             sendOrQueue(payload)
         }
@@ -122,16 +127,17 @@ class NotifyListenerService : NotificationListenerService() {
         val apiUrl = store.getApiUrl()
         if (apiUrl.isBlank()) {
             enqueue(payload)
-            Log.d(tag, "queued(no-config) msgId=${payload.clientMsgId}")
+            logWarn("queued(no-config) msgId=${payload.clientMsgId}")
             requestEnsureConfig()
             return
         }
 
         if (postPayload(payload)) {
+            logInfo("notify sent msgId=${payload.clientMsgId}")
             return
         }
         enqueue(payload)
-        Log.d(tag, "queued(send-fail) msgId=${payload.clientMsgId}")
+        logWarn("queued(send-fail) msgId=${payload.clientMsgId}")
         requestEnsureConfig()
     }
 
@@ -151,10 +157,10 @@ class NotifyListenerService : NotificationListenerService() {
                 deviceId = payload.deviceId,
                 deviceName = payload.deviceName
             )
-            if (!ok) Log.d(tag, "notify fail msgId=${payload.clientMsgId}")
+            if (!ok) logWarn("notify fail msgId=${payload.clientMsgId}")
             ok
         } catch (e: Throwable) {
-            Log.w(tag, "notify error: ${e.message}")
+            logWarn("notify error: ${e.message}")
             false
         }
     }
@@ -197,14 +203,14 @@ class NotifyListenerService : NotificationListenerService() {
                 }
                 saveQueue(remain)
                 if (sent > 0) {
-                    Log.d(tag, "retry-sent=$sent dropped=$dropped remain=${remain.size}")
+                    logInfo("retry-sent=$sent dropped=$dropped remain=${remain.size}")
                 }
                 if (sent <= 0 && dropped > 0) {
-                    Log.d(tag, "retry-dropped=$dropped remain=${remain.size}")
+                    logWarn("retry-dropped=$dropped remain=${remain.size}")
                 }
             }
         } catch (e: Throwable) {
-            Log.w(tag, "flush queue fail: ${e.message}")
+            logWarn("flush queue fail: ${e.message}")
         }
     }
 
@@ -219,7 +225,7 @@ class NotifyListenerService : NotificationListenerService() {
                 deviceName = store.getDeviceName()
             )
         } catch (e: Throwable) {
-            Log.w(tag, "ping fail: ${e.message}")
+            logWarn("ping fail: ${e.message}")
         }
     }
 
@@ -243,9 +249,9 @@ class NotifyListenerService : NotificationListenerService() {
                 val claim = NotifyApi.autoClaim(base, store.getDeviceId(), store.getDeviceName()) ?: return
                 store.setApiUrl(claim.apiUrl)
                 store.setAuthToken(claim.authToken)
-                Log.d(tag, "auto-claim ok => ${claim.apiUrl}")
+                logInfo("auto-claim ok => ${claim.apiUrl}")
             } catch (e: Throwable) {
-                Log.w(tag, "ensure config fail: ${e.message}")
+                logWarn("ensure config fail: ${e.message}")
             }
         }
     }
@@ -456,5 +462,15 @@ class NotifyListenerService : NotificationListenerService() {
             ts = item.optLong("ts", System.currentTimeMillis()),
             retry = item.optInt("retry", 0)
         )
+    }
+
+    private fun logInfo(msg: String) {
+        Log.d(tag, msg)
+        MobileLogStore.info(applicationContext, msg)
+    }
+
+    private fun logWarn(msg: String) {
+        Log.w(tag, msg)
+        MobileLogStore.warn(applicationContext, msg)
     }
 }
