@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">收款同步助手</string>
+    <string name="service_name">收款通知监听</string>
+    <string name="title_main">收款同步助手</string>
+    <string name="label_base_url">服务器地址（局域网）</string>
+    <string name="btn_save">保存服务器地址</string>
+    <string name="btn_notify_access">打开通知读取权限</string>
+    <string name="btn_battery">电池后台设置</string>
+    <string name="btn_open_admin">打开后台页面</string>
+</resources>

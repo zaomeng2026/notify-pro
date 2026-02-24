@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <title>Payment Display</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="screen">
+    <div class="topbar">
+      <section class="brand">
+        <h1 id="shop-name">Store</h1>
+        <div class="clock" id="clock">--</div>
+        <div class="conn-status" id="conn-wrap">
+          <span class="conn-dot offline" id="conn-dot"></span>
+          <span id="conn-text">OFFLINE</span>
+          <span id="conn-meta"></span>
+        </div>
+      </section>
+      <section class="notice">
+        <div class="notice-title" id="lbl-notice">Notice</div>
+        <div class="notice-text" id="notice-text"></div>
+      </section>
+      <section class="contact">
+        <div class="notice-title" id="lbl-contact">Contact</div>
+        <div class="contact-text" id="contact-text"></div>
+      </section>
+    </div>
+
+    <main class="main">
+      <section class="left">
+        <div class="stats">
+          <div class="stat">
+            <div class="label" id="lbl-total-count">Total Count</div>
+            <div class="value" id="stat-total-count">0</div>
+          </div>
+          <div class="stat" id="stat-card-total-amount">
+            <div class="label" id="lbl-total-amount">Total Amount (CNY)</div>
+            <div class="value" id="stat-total-amount">0</div>
+          </div>
+          <div class="stat">
+            <div class="label" id="lbl-today-count">Today Count</div>
+            <div class="value" id="stat-today-count">0</div>
+          </div>
+          <div class="stat" id="stat-card-today-amount">
+            <div class="label" id="lbl-today-amount">Today Amount (CNY)</div>
+            <div class="value" id="stat-today-amount">0</div>
+          </div>
+        </div>
+
+        <section class="board">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th style="width: 12%;" id="th-no">No</th>
+                  <th style="width: 18%;" id="th-channel">Channel</th>
+                  <th style="width: 28%;" id="th-amount">Amount (CNY)</th>
+                  <th style="width: 42%;" id="th-time">Time</th>
+                </tr>
+              </thead>
+              <tbody id="tbody"></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+
+      <aside class="qr-panel">
+        <div class="qr-box">
+          <img id="qr-image" alt="personal qr" style="display:none;" />
+          <div class="qr-empty" id="qr-empty">No personal QR configured</div>
+        </div>
+        <button class="btn" id="btn-fs">Fullscreen</button>
+      </aside>
+    </main>
+
+    <footer class="footer-actions">
+      <button class="btn" id="btn-prev">Prev</button>
+      <button class="btn" id="btn-next">Next</button>
+      <button class="btn" id="btn-today">Today</button>
+      <button class="btn" id="btn-all">All <span id="page-indicator">1/1</span></button>
+    </footer>
+  </div>
+
+  <div class="fullscreen-hint" id="fs-overlay">
+    <button id="fs-overlay-btn">Tap to enter fullscreen</button>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

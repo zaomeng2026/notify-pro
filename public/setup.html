@@ -1,0 +1,56 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>收款大屏安装向导</title>
+  <style>
+    body { margin: 0; font-family: "Microsoft YaHei", sans-serif; background: #f2f6fb; color: #18273d; }
+    .wrap { max-width: 980px; margin: 24px auto; padding: 0 14px; }
+    .hero { background: linear-gradient(120deg, #0c2d56, #13457e); color: #eef7ff; border-radius: 14px; padding: 22px; }
+    .hero h1 { margin: 0 0 8px; }
+    .hero p { margin: 0; opacity: 0.9; }
+    .steps { margin-top: 14px; display: grid; gap: 12px; grid-template-columns: repeat(3, 1fr); }
+    .step { background: #fff; border-radius: 12px; padding: 16px; box-shadow: 0 6px 18px rgba(19, 43, 72, .08); }
+    .num { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: #1f6feb; color: #fff; font-weight: bold; margin-bottom: 8px; }
+    .row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+    a, button { text-decoration: none; border: 0; border-radius: 8px; padding: 10px 14px; background: #1f6feb; color: #fff; cursor: pointer; }
+    .alt { background: #0c7b42; }
+    .muted { color: #657992; font-size: 13px; margin-top: 6px; }
+    @media (max-width: 860px) { .steps { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="hero">
+      <h1>收款大屏安装向导</h1>
+      <p>按 3 步完成商家部署: 店铺信息 -> 手机绑定 -> 全屏展示</p>
+      <div class="row">
+        <a href="/admin">打开后台</a>
+        <a href="/" class="alt">打开大屏</a>
+      </div>
+    </section>
+
+    <section class="steps">
+      <article class="step">
+        <div class="num">1</div>
+        <h3>设置店铺信息</h3>
+        <div>在后台填写店铺名、公告、联系方式、个人二维码。</div>
+        <div class="muted">入口: /admin</div>
+      </article>
+      <article class="step">
+        <div class="num">2</div>
+        <h3>扫码授权手机</h3>
+        <div>后台生成绑定二维码，手机扫码后点击确认，Auto.js 自动认领配置。</div>
+        <div class="muted">无需手填 URL / 配对码</div>
+      </article>
+      <article class="step">
+        <div class="num">3</div>
+        <h3>开机自动全屏</h3>
+        <div>使用“打开全屏大屏.bat”或浏览器 kiosk 模式长期展示。</div>
+        <div class="muted">建议固定局域网 IP</div>
+      </article>
+    </section>
+  </div>
+</body>
+</html>

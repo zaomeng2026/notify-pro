@@ -1,0 +1,35 @@
+## Node / server
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+## Local env / runtime
+.env
+.env.*
+!.env.example
+logs/
+*.log
+tmp/
+
+## App local data
+data/
+*.db
+*.sqlite
+*.sqlite3
+
+## Android / Gradle
+.gradle/
+local.properties
+**/build/
+*.apk
+*.aab
+captures/
+
+## IDE / OS
+.idea/
+*.iml
+.vscode/
+.DS_Store
+Thumbs.db

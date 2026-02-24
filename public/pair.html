@@ -1,0 +1,59 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>手机绑定确认</title>
+  <style>
+    body { margin: 0; font-family: "Microsoft YaHei", sans-serif; background: #0b1f38; color: #e9f5ff; }
+    .wrap { min-height: 100vh; display: grid; place-items: center; padding: 20px; }
+    .card { width: min(520px, 100%); background: rgba(11, 36, 64, 0.92); border: 1px solid #3f7eb6; border-radius: 14px; padding: 22px; }
+    h1 { margin: 0 0 8px; font-size: 26px; }
+    p { margin: 0 0 14px; color: #b2cce6; }
+    .mono { font-family: Consolas, "Courier New", monospace; word-break: break-all; color: #a7d8ff; }
+    button { width: 100%; border: 0; border-radius: 10px; padding: 12px; font-size: 18px; background: #31a7ff; color: #fff; cursor: pointer; }
+    .state { margin-top: 10px; min-height: 20px; color: #77eea9; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>确认绑定本手机</h1>
+      <p>点击后，当前手机所在网络将获得 10 分钟自动绑定权限。</p>
+      <div class="mono" id="tokenText"></div>
+      <button id="approveBtn">确认绑定</button>
+      <div class="state" id="stateText"></div>
+    </div>
+  </div>
+
+  <script>
+    function getToken() {
+      var seg = location.pathname.split('/').filter(Boolean);
+      return seg.length ? seg[seg.length - 1] : '';
+    }
+
+    async function approve() {
+      const token = getToken();
+      stateText.textContent = '处理中...';
+      try {
+        const r = await fetch('/api/pairing/approve', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: token })
+        });
+        const j = await r.json();
+        if (!j.ok) {
+          stateText.textContent = j.message || '绑定失败';
+          return;
+        }
+        stateText.textContent = '已授权。现在打开 Auto.js 脚本即可自动完成配对。';
+      } catch (err) {
+        stateText.textContent = err.message || '网络异常';
+      }
+    }
+
+    tokenText.textContent = 'Session: ' + getToken();
+    approveBtn.addEventListener('click', approve);
+  </script>
+</body>
+</html>
