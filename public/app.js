@@ -100,6 +100,7 @@ function renderAllButtonText() {
 }
 
 async function boot() {
+  updatePageSizeByViewport();
   setStaticTexts();
   bindActions();
   startClock();
@@ -107,6 +108,7 @@ async function boot() {
   connectStream();
   tryAutoFullscreen();
   setInterval(loadConnectionStatus, 15000);
+  window.addEventListener("resize", onViewportChange, { passive: true });
 }
 
 function bindActions() {
@@ -137,6 +139,22 @@ function bindActions() {
     renderTable(state.records);
   });
 
+}
+
+function updatePageSizeByViewport() {
+  const h = Math.max(320, window.innerHeight || 0);
+  if (h < 700) {
+    state.pageSize = 6;
+  } else if (h < 860) {
+    state.pageSize = 8;
+  } else {
+    state.pageSize = 10;
+  }
+}
+
+function onViewportChange() {
+  updatePageSizeByViewport();
+  renderTable();
 }
 
 async function loadSettings() {
