@@ -39,7 +39,7 @@ jobs:
       - name: Build debug
         run: |
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon
+          ./gradlew assembleDebug --no-daemon --stacktrace
 
       - name: Upload debug artifact
         uses: actions/upload-artifact@v4

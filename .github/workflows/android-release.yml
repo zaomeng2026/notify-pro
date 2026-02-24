@@ -55,7 +55,8 @@ jobs:
             -Pandroid.injected.signing.store.password="${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" \
             -Pandroid.injected.signing.key.alias="${{ secrets.ANDROID_KEY_ALIAS }}" \
             -Pandroid.injected.signing.key.password="${{ secrets.ANDROID_KEY_PASSWORD }}" \
-            --no-daemon
+            --no-daemon \
+            --stacktrace
 
       - name: Upload release artifact
         uses: actions/upload-artifact@v4
