@@ -69,6 +69,7 @@ class MainActivity : AppCompatActivity() {
         val listenerEnabled = isNotificationListenerEnabled()
         val apiUrl = store.getApiUrl()
         val queueSize = store.getPendingQueueSize()
+        val versionName = getAppVersionName()
         binding.tvStatus.text = buildString {
             append("监听权限: ")
             append(if (listenerEnabled) "已开启" else "未开启")
@@ -85,7 +86,7 @@ class MainActivity : AppCompatActivity() {
             append("设备ID: ")
             append(store.getDeviceId())
             append('\n')
-            append("版本: ${BuildConfig.VERSION_NAME}")
+            append("版本: $versionName")
             append('\n')
             append("安卓: ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})")
         }
@@ -99,6 +100,15 @@ class MainActivity : AppCompatActivity() {
 
     private fun toast(msg: String) {
         Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
+    }
+
+    private fun getAppVersionName(): String {
+        return try {
+            val info = packageManager.getPackageInfo(packageName, 0)
+            info.versionName ?: "-"
+        } catch (_: Throwable) {
+            "-"
+        }
     }
 
     private fun openUrlSafely(url: String) {

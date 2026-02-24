@@ -198,7 +198,8 @@ class NotifyListenerService : NotificationListenerService() {
                 saveQueue(remain)
                 if (sent > 0) {
                     Log.d(tag, "retry-sent=$sent dropped=$dropped remain=${remain.size}")
-                } else if (dropped > 0) {
+                }
+                if (sent <= 0 && dropped > 0) {
                     Log.d(tag, "retry-dropped=$dropped remain=${remain.size}")
                 }
             }
