@@ -65,7 +65,7 @@ class NotifyListenerService : NotificationListenerService() {
         super.onCreate()
         store = ConfigStore(applicationContext)
         logInfo("service created")
-        infraExecutor.scheduleWithFixedDelay({ safeEnsureConfig() }, 2, 10, TimeUnit.SECONDS)
+        infraExecutor.scheduleWithFixedDelay({ safeEnsureConfig(false) }, 2, 10, TimeUnit.SECONDS)
         infraExecutor.scheduleWithFixedDelay({ safePing() }, 10, 60, TimeUnit.SECONDS)
         ioExecutor.scheduleWithFixedDelay({ safeFlushQueue() }, 8, 8, TimeUnit.SECONDS)
     }
@@ -79,7 +79,7 @@ class NotifyListenerService : NotificationListenerService() {
     override fun onListenerConnected() {
         super.onListenerConnected()
         logInfo("notification listener connected")
-        infraExecutor.execute { safeEnsureConfig() }
+        infraExecutor.execute { safeEnsureConfig(false) }
         ioExecutor.execute { safeFlushQueue() }
     }
 
@@ -218,12 +218,16 @@ class NotifyListenerService : NotificationListenerService() {
         try {
             val apiUrl = store.getApiUrl()
             if (apiUrl.isBlank()) return
-            NotifyApi.ping(
+            val ok = NotifyApi.ping(
                 baseApiUrl = apiUrl,
                 authToken = store.getAuthToken(),
                 deviceId = store.getDeviceId(),
                 deviceName = store.getDeviceName()
             )
+            if (!ok) {
+                logWarn("ping failed, token/config may be invalid")
+                safeEnsureConfig(true)
+            }
         } catch (e: Throwable) {
             logWarn("ping fail: ${e.message}")
         }
@@ -233,20 +237,25 @@ class NotifyListenerService : NotificationListenerService() {
         val now = System.currentTimeMillis()
         if (now - lastEnsureRequestAt < 5000) return
         lastEnsureRequestAt = now
-        infraExecutor.execute { safeEnsureConfig() }
+        infraExecutor.execute { safeEnsureConfig(false) }
     }
 
-    private fun safeEnsureConfig() {
+    private fun safeEnsureConfig(forceReclaim: Boolean) {
         synchronized(ensureLock) {
             try {
                 val apiUrl = store.getApiUrl()
-                if (apiUrl.isNotBlank() && NotifyApi.isHealthOk(extractBaseFromApi(apiUrl) ?: "")) return
+                if (!forceReclaim && apiUrl.isNotBlank() && NotifyApi.isHealthOk(extractBaseFromApi(apiUrl) ?: "")) return
 
                 val base = store.getBaseUrl().ifBlank { discoverBaseUrl().orEmpty() }
                 if (base.isBlank()) return
                 store.setBaseUrl(base)
 
-                val claim = NotifyApi.autoClaim(base, store.getDeviceId(), store.getDeviceName()) ?: return
+                val claim = NotifyApi.autoClaim(base, store.getDeviceId(), store.getDeviceName()) ?: run {
+                    if (forceReclaim) {
+                        logWarn("re-claim failed, please scan QR to bind again")
+                    }
+                    return
+                }
                 store.setApiUrl(claim.apiUrl)
                 store.setAuthToken(claim.authToken)
                 logInfo("auto-claim ok => ${claim.apiUrl}")

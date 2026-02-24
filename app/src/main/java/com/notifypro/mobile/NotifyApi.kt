@@ -196,15 +196,21 @@ object NotifyApi {
         }
     }
 
-    fun ping(baseApiUrl: String, authToken: String, deviceId: String, deviceName: String) {
-        val root = extractRoot(baseApiUrl) ?: return
+    fun ping(baseApiUrl: String, authToken: String, deviceId: String, deviceName: String): Boolean {
+        val root = extractRoot(baseApiUrl) ?: return false
         val body = JSONObject()
             .put("deviceId", deviceId)
             .put("deviceName", deviceName)
             .put("platform", "android")
         val headers = mutableMapOf<String, String>()
         if (authToken.isNotBlank()) headers["X-Auth-Token"] = authToken
-        request("POST", "$root/api/device/ping", body.toString(), headers, 3500)
+        return try {
+            val (code, text) = request("POST", "$root/api/device/ping", body.toString(), headers, 3500)
+            if (code != 200 || text.isBlank()) return false
+            JSONObject(text).optBoolean("ok", false)
+        } catch (_: Throwable) {
+            false
+        }
     }
 
     fun getConnectionStatus(baseUrl: String): ConnectionStatus? {

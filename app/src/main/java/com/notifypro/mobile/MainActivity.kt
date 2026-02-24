@@ -62,11 +62,19 @@ class MainActivity : AppCompatActivity() {
                 toast("请输入正确的服务器地址")
                 return@setOnClickListener
             }
+            val oldBase = store.getBaseUrl()
+            val baseChanged = oldBase.isNotBlank() && oldBase != base
             store.setBaseUrl(base)
-            store.clearRemoteConfig()
-            MobileLogStore.info(applicationContext, "base url saved: $base")
+            if (baseChanged) {
+                // Only clear claimed api/token when base host actually changed.
+                store.clearRemoteConfig()
+                MobileLogStore.warn(applicationContext, "base changed, cleared claimed api/token: $oldBase -> $base")
+                toast("服务器地址已变更，请重新扫码绑定")
+            } else {
+                MobileLogStore.info(applicationContext, "base url saved (keep claim): $base")
+                toast("已保存")
+            }
             refreshUi()
-            toast("已保存")
         }
 
         binding.btnScanPair.setOnClickListener {
@@ -206,6 +214,9 @@ class MainActivity : AppCompatActivity() {
                 binding.tvConnectionTest.text = buildString {
                     append("健康检查：")
                     append(if (healthOk) "正常" else "失败")
+                    append('\n')
+                    append("当前API：")
+                    append(if (apiUrl.isBlank()) "未绑定" else apiUrl)
                     append('\n')
 
                     append("连接状态接口：")
