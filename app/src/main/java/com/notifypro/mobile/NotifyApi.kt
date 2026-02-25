@@ -13,9 +13,31 @@ import java.util.Locale
 object NotifyApi {
     private const val TAG = "NotifyApi"
 
+    data class ApiCallDebug(
+        val ok: Boolean,
+        val code: Int,
+        val message: String,
+        val bodySnippet: String = ""
+    )
+
     data class ClaimResult(
         val apiUrl: String,
         val authToken: String
+    )
+
+    data class ClaimDebugResult(
+        val claim: ClaimResult?,
+        val code: Int,
+        val message: String,
+        val bodySnippet: String = ""
+    )
+
+    data class HealthDebug(
+        val ok: Boolean,
+        val code: Int,
+        val message: String,
+        val revision: String = "",
+        val bodySnippet: String = ""
     )
 
     data class FeatureConfig(
@@ -61,20 +83,61 @@ object NotifyApi {
     )
 
     fun isHealthOk(url: String, timeoutMs: Int = 2500): Boolean {
+        return healthDebug(url, timeoutMs).ok
+    }
+
+    fun healthDebug(url: String, timeoutMs: Int = 2500): HealthDebug {
         val base = ConfigStore.normalizeBaseUrl(url)
-        if (base.isBlank()) return false
+        if (base.isBlank()) {
+            return HealthDebug(
+                ok = false,
+                code = 0,
+                message = "invalid base url"
+            )
+        }
         return try {
-            val (code, _) = request("GET", "$base/api/health", null, null, timeoutMs)
-            code == 200
-        } catch (_: Throwable) {
-            false
+            val (code, text) = request("GET", "$base/api/health", null, null, timeoutMs)
+            if (code != 200 || text.isBlank()) {
+                HealthDebug(
+                    ok = false,
+                    code = code,
+                    message = "http not 200",
+                    bodySnippet = text.take(160)
+                )
+            } else {
+                val json = JSONObject(text)
+                val ok = json.optBoolean("ok", false)
+                HealthDebug(
+                    ok = ok,
+                    code = code,
+                    message = if (ok) "ok" else "ok=false",
+                    revision = json.optString("revision", ""),
+                    bodySnippet = text.take(160)
+                )
+            }
+        } catch (e: Throwable) {
+            HealthDebug(
+                ok = false,
+                code = -1,
+                message = "exception: ${e.message}"
+            )
         }
     }
 
     fun autoClaim(baseUrl: String, deviceId: String, deviceName: String, token: String = ""): ClaimResult? {
+        return autoClaimDebug(baseUrl, deviceId, deviceName, token).claim
+    }
+
+    fun autoClaimDebug(baseUrl: String, deviceId: String, deviceName: String, token: String = ""): ClaimDebugResult {
         return try {
             val base = ConfigStore.normalizeBaseUrl(baseUrl)
-            if (base.isBlank()) return null
+            if (base.isBlank()) {
+                return ClaimDebugResult(
+                    claim = null,
+                    code = 0,
+                    message = "invalid base url"
+                )
+            }
 
             val body = JSONObject()
                 .put("deviceId", deviceId)
@@ -87,44 +150,104 @@ object NotifyApi {
             val (code, text) = request("POST", "$base/api/pairing/auto-claim", body.toString(), null, 5000)
             if (code != 200 || text.isBlank()) {
                 Log.w(TAG, "autoClaim fail: code=$code body=${text.take(180)}")
-                return null
+                return ClaimDebugResult(
+                    claim = null,
+                    code = code,
+                    message = "http not 200",
+                    bodySnippet = text.take(180)
+                )
             }
             val json = JSONObject(text)
             if (!json.optBoolean("ok", false)) {
                 Log.w(TAG, "autoClaim fail: ok=false body=${text.take(180)}")
-                return null
+                return ClaimDebugResult(
+                    claim = null,
+                    code = code,
+                    message = "ok=false",
+                    bodySnippet = text.take(180)
+                )
             }
-            val config = json.optJSONObject("config") ?: return null
+            val config = json.optJSONObject("config")
+                ?: return ClaimDebugResult(
+                    claim = null,
+                    code = code,
+                    message = "missing config",
+                    bodySnippet = text.take(180)
+                )
             val apiUrl = config.optString("apiUrl", "")
-            if (apiUrl.isBlank()) return null
-            ClaimResult(
-                apiUrl = apiUrl,
-                authToken = config.optString("authToken", "")
+            if (apiUrl.isBlank()) {
+                return ClaimDebugResult(
+                    claim = null,
+                    code = code,
+                    message = "empty apiUrl",
+                    bodySnippet = text.take(180)
+                )
+            }
+            ClaimDebugResult(
+                claim = ClaimResult(
+                    apiUrl = apiUrl,
+                    authToken = config.optString("authToken", "")
+                ),
+                code = code,
+                message = "ok"
             )
         } catch (e: Throwable) {
             Log.w(TAG, "autoClaim exception: ${e.message}")
-            null
+            ClaimDebugResult(
+                claim = null,
+                code = -1,
+                message = "exception: ${e.message}"
+            )
         }
     }
 
     fun approvePairing(baseUrl: String, token: String): Boolean {
+        return approvePairingDebug(baseUrl, token).ok
+    }
+
+    fun approvePairingDebug(baseUrl: String, token: String): ApiCallDebug {
         val base = ConfigStore.normalizeBaseUrl(baseUrl)
-        if (base.isBlank() || token.isBlank()) return false
+        if (base.isBlank() || token.isBlank()) {
+            return ApiCallDebug(
+                ok = false,
+                code = 0,
+                message = "base/token empty"
+            )
+        }
         val body = JSONObject().put("token", token)
         return try {
             val (code, text) = request("POST", "$base/api/pairing/approve", body.toString(), null, 5000)
             if (code != 200 || text.isBlank()) {
                 Log.w(TAG, "approvePairing fail: code=$code body=${text.take(180)}")
-                return false
+                return ApiCallDebug(
+                    ok = false,
+                    code = code,
+                    message = "http not 200",
+                    bodySnippet = text.take(180)
+                )
             }
             val ok = JSONObject(text).optBoolean("ok", false)
             if (!ok) {
                 Log.w(TAG, "approvePairing fail: ok=false body=${text.take(180)}")
+                return ApiCallDebug(
+                    ok = false,
+                    code = code,
+                    message = "ok=false",
+                    bodySnippet = text.take(180)
+                )
             }
-            ok
+            ApiCallDebug(
+                ok = true,
+                code = code,
+                message = "ok"
+            )
         } catch (e: Throwable) {
             Log.w(TAG, "approvePairing fail: ${e.message}")
-            false
+            ApiCallDebug(
+                ok = false,
+                code = -1,
+                message = "exception: ${e.message}"
+            )
         }
     }
 

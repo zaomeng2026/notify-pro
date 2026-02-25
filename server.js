@@ -77,6 +77,7 @@ app.get('/api/health', async (_req, res) => {
 
     res.json({
       ok: true,
+      revision: SERVER_REVISION,
       warnings,
       stats: {
         records: recordsCount,
