@@ -430,16 +430,10 @@ class MainActivity : AppCompatActivity() {
                     refreshUi()
                 }
 
-                val approve = NotifyApi.approvePairingDebug(baseUrl, token)
-                trace("approve code=${approve.code} ok=${approve.ok} msg=${approve.message}")
-                if (approve.bodySnippet.isNotBlank()) {
-                    trace("approve body=${approve.bodySnippet}")
-                }
-                if (!approve.ok) {
-                    MobileLogStore.warn(applicationContext, "绑定确认失败，尝试直接领取配置 token=${token.take(8)}")
-                }
+                trace("skip approve step, try direct claim first")
 
                 fun tryClaim(step: String, tokenArg: String): NotifyApi.ClaimResult? {
+                    trace("call $step tokenLen=${tokenArg.length}")
                     val r = NotifyApi.autoClaimDebug(baseUrl, store.getDeviceId(), store.getDeviceName(), tokenArg)
                     trace("$step code=${r.code} ok=${r.claim != null} msg=${r.message}")
                     if (r.bodySnippet.isNotBlank()) {
@@ -457,6 +451,18 @@ class MainActivity : AppCompatActivity() {
                         if (claim == null) claim = tryClaim("retry#${i + 1}(no-token)", "")
                         if (claim != null) break
                     }
+                }
+
+                if (claim == null) {
+                    val approve = NotifyApi.approvePairingDebug(baseUrl, token)
+                    trace("fallback approve code=${approve.code} ok=${approve.ok} msg=${approve.message}")
+                    if (approve.bodySnippet.isNotBlank()) {
+                        trace("fallback approve body=${approve.bodySnippet}")
+                    }
+                    if (!approve.ok) {
+                        MobileLogStore.warn(applicationContext, "绑定确认失败，尝试直接领取配置 token=${token.take(8)}")
+                    }
+                    claim = tryClaim("after-approve claim(token)", token)
                 }
 
                 if (claim == null) {
