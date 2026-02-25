@@ -10,7 +10,7 @@ import java.util.Locale
 object MobileLogStore {
     private const val PREFS_NAME = "notify_pro_mobile_logs"
     private const val KEY_ITEMS = "items"
-    private const val MAX_ITEMS = 500
+    private const val MAX_ITEMS = 300
     private const val MAX_MSG_LEN = 4000
 
     data class Item(
@@ -32,6 +32,8 @@ object MobileLogStore {
     fun clear(context: Context) {
         prefs(context).edit().remove(KEY_ITEMS).apply()
     }
+
+    fun maxItems(): Int = MAX_ITEMS
 
     @Synchronized
     fun render(context: Context, limit: Int = 200): String {

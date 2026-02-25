@@ -110,27 +110,23 @@ class MainActivity : AppCompatActivity() {
             openUrlSafely("$base/admin")
         }
 
+        binding.btnOpenLogs.setOnClickListener {
+            startActivity(Intent(this, LogActivity::class.java))
+        }
+
         binding.btnLoadStats.setOnClickListener { loadStats() }
         binding.btnLoadSettings.setOnClickListener { loadSettings() }
         binding.btnSaveSettings.setOnClickListener { saveSettings() }
-        binding.btnRefreshLogs.setOnClickListener { refreshLogs() }
-        binding.btnClearLogs.setOnClickListener {
-            MobileLogStore.clear(applicationContext)
-            refreshLogs()
-            toast("日志已清空")
-        }
 
         refreshUi()
         testConnection()
         loadStats()
         loadSettings()
-        refreshLogs()
     }
 
     override fun onResume() {
         super.onResume()
         refreshUi()
-        refreshLogs()
     }
 
     override fun onDestroy() {
@@ -262,7 +258,6 @@ class MainActivity : AppCompatActivity() {
                     applicationContext,
                     "连接测试完成: health=$healthOk statusApi=${status != null} ping=${pingStatus != null}"
                 )
-                refreshLogs()
             }
         }
     }
@@ -353,7 +348,6 @@ class MainActivity : AppCompatActivity() {
                 MobileLogStore.info(applicationContext, "设置已保存")
                 toast("设置已保存")
                 loadStats()
-                refreshLogs()
             }
         }
     }
@@ -400,6 +394,19 @@ class MainActivity : AppCompatActivity() {
     private fun approveAndClaim(baseUrl: String, token: String) {
         toast("正在绑定，请稍候...")
         io.execute {
+            val oldBase = store.getBaseUrl()
+            val baseChanged = oldBase.isNotBlank() && oldBase != baseUrl
+            store.setBaseUrl(baseUrl)
+            // When switching scan target, always clear old api/token first to avoid stale endpoint confusion.
+            if (baseChanged || store.getApiUrl().isNotBlank()) {
+                store.clearRemoteConfig()
+                MobileLogStore.info(applicationContext, "开始扫码绑定，已清空旧接口配置: $oldBase -> $baseUrl")
+            }
+            runOnUiThread {
+                binding.etBaseUrl.setText(baseUrl)
+                refreshUi()
+            }
+
             val approved = NotifyApi.approvePairing(baseUrl, token)
             if (!approved) {
                 MobileLogStore.warn(applicationContext, "绑定确认失败")
@@ -407,7 +414,15 @@ class MainActivity : AppCompatActivity() {
                 return@execute
             }
 
-            val claim = NotifyApi.autoClaim(baseUrl, store.getDeviceId(), store.getDeviceName())
+            var claim = NotifyApi.autoClaim(baseUrl, store.getDeviceId(), store.getDeviceName())
+            if (claim == null) {
+                // Some devices/network paths have slight delay after approve -> allow short retries.
+                for (i in 0 until 5) {
+                    Thread.sleep(600)
+                    claim = NotifyApi.autoClaim(baseUrl, store.getDeviceId(), store.getDeviceName())
+                    if (claim != null) break
+                }
+            }
             if (claim == null) {
                 MobileLogStore.warn(applicationContext, "领取配置失败")
                 runOnUiThread { toast("领取配置失败") }
@@ -426,7 +441,6 @@ class MainActivity : AppCompatActivity() {
                 testConnection()
                 loadStats()
                 loadSettings()
-                refreshLogs()
             }
         }
     }
@@ -522,10 +536,6 @@ class MainActivity : AppCompatActivity() {
         }
         MobileLogStore.warn(applicationContext, "电池后台设置跳转失败，品牌=$brand")
         toast("无法打开电池后台设置")
-    }
-
-    private fun refreshLogs() {
-        binding.tvLogs.text = MobileLogStore.render(applicationContext, 300)
     }
 
     private fun toast(msg: String) {

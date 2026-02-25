@@ -2,26 +2,19 @@
 <resources>
     <string name="app_name">收款同步助手</string>
     <string name="service_name">收款通知监听</string>
+
     <string name="title_main">收款同步助手</string>
     <string name="subtitle_main">通知监听、扫码绑定、配置同步</string>
+
     <string name="section_runtime_status">运行状态</string>
     <string name="section_connect_bind">连接与绑定</string>
     <string name="section_connection_test">连接测试</string>
-    <string name="label_base_url">服务器地址（局域网）</string>
-    <string name="label_admin_password">后台管理员密码（用于保存设置）</string>
-    <string name="hint_base_url">http://192.168.1.10:3180</string>
-    <string name="hint_admin_password">留空则使用已保存密码</string>
-    <string name="btn_save">保存服务器地址</string>
-    <string name="btn_test_connection">测试连接</string>
-    <string name="text_not_tested">未测试</string>
-    <string name="btn_scan_pair">扫码绑定</string>
-    <string name="btn_notify_access">打开通知读取权限</string>
-    <string name="btn_battery">电池后台设置</string>
-    <string name="btn_open_admin">打开后台页面</string>
     <string name="section_stats">统计信息</string>
-    <string name="text_not_loaded">未加载</string>
-    <string name="btn_refresh_stats">刷新统计</string>
     <string name="section_shop_settings">店铺与大屏设置</string>
+    <string name="section_runtime_logs">运行日志</string>
+
+    <string name="label_base_url">服务器地址（支持局域网或云服务器）</string>
+    <string name="label_admin_password">后台管理员密码（用于保存设置）</string>
     <string name="label_shop_name">店铺名称</string>
     <string name="label_notice">公告</string>
     <string name="label_wechat_qr_url">微信收款码地址</string>
@@ -30,6 +23,9 @@
     <string name="label_backup_keep">备份保留份数</string>
     <string name="label_backup_hour">自动备份小时</string>
     <string name="label_display_switches">大屏显示开关</string>
+
+    <string name="hint_base_url">http://192.168.1.10:3180</string>
+    <string name="hint_admin_password">留空则使用已保存密码</string>
     <string name="hint_shop_name">店铺名称</string>
     <string name="hint_notice">公告</string>
     <string name="hint_wechat_qr_url">微信收款码图片地址（可选）</string>
@@ -37,6 +33,27 @@
     <string name="hint_contact">联系方式</string>
     <string name="hint_backup_keep">备份保留份数（3-365）</string>
     <string name="hint_backup_hour">自动备份小时（0-23）</string>
+
+    <string name="btn_save">1. 保存服务器地址</string>
+    <string name="btn_scan_pair">2. 扫码绑定</string>
+    <string name="btn_notify_access">3. 通知读取权限</string>
+    <string name="btn_battery">4. 电池后台设置</string>
+    <string name="btn_open_admin">后台页面</string>
+    <string name="btn_open_logs">查看日志</string>
+    <string name="btn_test_connection">测试连接</string>
+    <string name="btn_refresh_stats">刷新统计</string>
+    <string name="btn_load_settings">加载设置</string>
+    <string name="btn_save_settings">保存设置</string>
+    <string name="btn_refresh_logs">刷新日志</string>
+    <string name="btn_clear_logs">清空日志</string>
+
+    <string name="text_not_tested">未测试</string>
+    <string name="text_not_loaded">未加载</string>
+    <string name="text_no_logs">暂无日志</string>
+    <string name="text_log_limit_hint">最多保留最近 %1$d 条日志</string>
+
+    <string name="title_logs">运行日志</string>
+
     <string name="sw_voice_broadcast">收款语音播报</string>
     <string name="sw_show_brand">显示店铺标题</string>
     <string name="sw_show_notice">显示公告卡片</string>
@@ -50,10 +67,4 @@
     <string name="sw_show_alipay_qrcode">显示支付宝收款码</string>
     <string name="sw_show_records_table">显示收款记录表</string>
     <string name="sw_show_footer_actions">显示底部分页按钮</string>
-    <string name="btn_load_settings">加载设置</string>
-    <string name="btn_save_settings">保存设置</string>
-    <string name="section_runtime_logs">运行日志</string>
-    <string name="btn_refresh_logs">刷新日志</string>
-    <string name="btn_clear_logs">清空日志</string>
-    <string name="text_no_logs">暂无日志</string>
 </resources>
