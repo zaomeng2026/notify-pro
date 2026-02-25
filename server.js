@@ -340,14 +340,21 @@ app.post('/api/pairing/auto-claim', (req, res) => {
   }
 
   // Strong fallback: if client carries explicit pairing token, trust that token first.
+  // Also accept "pending" and promote it to approved to avoid app-side two-step race.
   if (!approval && reqToken) {
     const sessions = cleanupSessions(readJson(PAIRING_SESSIONS_FILE, []), now);
     const byToken = sessions.find((s) =>
       s.token === reqToken &&
-      (s.status === 'approved' || s.status === 'used') &&
+      (s.status === 'pending' || s.status === 'approved' || s.status === 'used') &&
       Number(s.expiresAt || 0) > now - 1000
     );
     if (byToken) {
+      if (byToken.status === 'pending') {
+        byToken.status = 'approved';
+        byToken.approvedAt = now;
+        byToken.approvedIp = ip;
+        writeJson(PAIRING_SESSIONS_FILE, sessions);
+      }
       approval = {
         token: byToken.token,
         approvedAt: Number(byToken.approvedAt || byToken.usedAt || now),
@@ -380,7 +387,7 @@ app.post('/api/pairing/auto-claim', (req, res) => {
 
   const sessions = readJson(PAIRING_SESSIONS_FILE, []);
   const index = sessions.findIndex((s) => s.token === approval.token);
-  if (index >= 0 && sessions[index].status === 'approved') {
+  if (index >= 0 && sessions[index].status !== 'used') {
     sessions[index].status = 'used';
     sessions[index].usedAt = now;
     writeJson(PAIRING_SESSIONS_FILE, sessions);

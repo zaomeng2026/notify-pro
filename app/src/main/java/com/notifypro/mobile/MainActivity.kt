@@ -435,6 +435,31 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 if (claim == null) {
+                    val inferredBase = ConfigStore.normalizeBaseUrl(baseUrl)
+                    val inferredApi = if (inferredBase.isBlank()) "" else "$inferredBase/api/notify"
+                    if (inferredApi.isNotBlank()) {
+                        val status = NotifyApi.pingAndGetStatus(
+                            baseApiUrl = inferredApi,
+                            authToken = "",
+                            deviceId = store.getDeviceId(),
+                            deviceName = store.getDeviceName()
+                        )
+                        if (status != null) {
+                            store.setBaseUrl(baseUrl)
+                            store.setApiUrl(inferredApi)
+                            store.setAuthToken("")
+                            MobileLogStore.warn(applicationContext, "领取配置失败，已回退为基础地址推导接口: $inferredApi")
+                            runOnUiThread {
+                                binding.etBaseUrl.setText(baseUrl)
+                                refreshUi()
+                                toast("绑定已完成（推导接口模式）")
+                                testConnection()
+                                loadStats()
+                            }
+                            return@execute
+                        }
+                    }
+
                     // 失败时保留最新 baseUrl，仅清空 api/token，避免“基础地址新、接口地址旧/空”混乱。
                     store.setBaseUrl(baseUrl)
                     store.clearRemoteConfig()
