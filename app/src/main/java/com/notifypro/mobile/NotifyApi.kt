@@ -113,8 +113,15 @@ object NotifyApi {
         val body = JSONObject().put("token", token)
         return try {
             val (code, text) = request("POST", "$base/api/pairing/approve", body.toString(), null, 5000)
-            if (code != 200 || text.isBlank()) return false
-            JSONObject(text).optBoolean("ok", false)
+            if (code != 200 || text.isBlank()) {
+                Log.w(TAG, "approvePairing fail: code=$code body=${text.take(180)}")
+                return false
+            }
+            val ok = JSONObject(text).optBoolean("ok", false)
+            if (!ok) {
+                Log.w(TAG, "approvePairing fail: ok=false body=${text.take(180)}")
+            }
+            ok
         } catch (e: Throwable) {
             Log.w(TAG, "approvePairing fail: ${e.message}")
             false

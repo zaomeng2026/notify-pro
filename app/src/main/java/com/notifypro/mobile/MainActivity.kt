@@ -394,17 +394,18 @@ class MainActivity : AppCompatActivity() {
     private fun approveAndClaim(baseUrl: String, token: String) {
         toast("正在绑定，请稍候...")
         io.execute {
-            val oldBase = store.getBaseUrl()
-            val oldApi = store.getApiUrl()
-            val oldAuth = store.getAuthToken()
             try {
+                val oldBase = store.getBaseUrl()
+                val oldApi = store.getApiUrl()
                 val baseChanged = oldBase.isNotBlank() && oldBase != baseUrl
+
                 store.setBaseUrl(baseUrl)
-                // When switching scan target, always clear old api/token first to avoid stale endpoint confusion.
+                // 扫新地址时先清理旧 api/token，避免 UI 显示旧接口。
                 if (baseChanged || oldApi.isNotBlank()) {
                     store.clearRemoteConfig()
                     MobileLogStore.info(applicationContext, "开始扫码绑定，已清空旧接口配置: $oldBase -> $baseUrl")
                 }
+
                 runOnUiThread {
                     binding.etBaseUrl.setText(baseUrl)
                     refreshUi()
@@ -412,25 +413,37 @@ class MainActivity : AppCompatActivity() {
 
                 val approved = NotifyApi.approvePairing(baseUrl, token)
                 if (!approved) {
-                    restorePreviousConfig(oldBase, oldApi, oldAuth)
-                    MobileLogStore.warn(applicationContext, "绑定确认失败")
-                    runOnUiThread { toast("绑定确认失败") }
-                    return@execute
+                    // token 可能已被其他流程先确认，不直接失败，继续领取配置。
+                    MobileLogStore.warn(applicationContext, "绑定确认失败，尝试直接领取配置 token=${token.take(8)}")
                 }
 
                 var claim = NotifyApi.autoClaim(baseUrl, store.getDeviceId(), store.getDeviceName(), token)
                 if (claim == null) {
-                    // Some devices/network paths have slight delay after approve -> allow short retries.
+                    // 兜底：token 失效时尝试无 token 领取（服务端会用最近 approved 会话）。
+                    claim = NotifyApi.autoClaim(baseUrl, store.getDeviceId(), store.getDeviceName())
+                }
+                if (claim == null) {
+                    // 某些机型/网络 approve -> claim 有短暂延迟，做短重试。
                     for (i in 0 until 5) {
                         Thread.sleep(600)
                         claim = NotifyApi.autoClaim(baseUrl, store.getDeviceId(), store.getDeviceName(), token)
+                        if (claim == null) {
+                            claim = NotifyApi.autoClaim(baseUrl, store.getDeviceId(), store.getDeviceName())
+                        }
                         if (claim != null) break
                     }
                 }
+
                 if (claim == null) {
-                    restorePreviousConfig(oldBase, oldApi, oldAuth)
-                    MobileLogStore.warn(applicationContext, "领取配置失败")
-                    runOnUiThread { toast("领取配置失败") }
+                    // 失败时保留最新 baseUrl，仅清空 api/token，避免“基础地址新、接口地址旧/空”混乱。
+                    store.setBaseUrl(baseUrl)
+                    store.clearRemoteConfig()
+                    MobileLogStore.warn(applicationContext, "领取配置失败，已保留最新基础地址: $baseUrl")
+                    runOnUiThread {
+                        binding.etBaseUrl.setText(baseUrl)
+                        refreshUi()
+                        toast("领取配置失败，请刷新二维码后重试")
+                    }
                     return@execute
                 }
 
@@ -448,26 +461,15 @@ class MainActivity : AppCompatActivity() {
                     loadSettings()
                 }
             } catch (e: Throwable) {
-                restorePreviousConfig(oldBase, oldApi, oldAuth)
+                store.setBaseUrl(baseUrl)
+                store.clearRemoteConfig()
                 MobileLogStore.warn(applicationContext, "绑定异常: ${e.message}")
-                runOnUiThread { toast("绑定异常，请查看日志") }
+                runOnUiThread {
+                    binding.etBaseUrl.setText(baseUrl)
+                    refreshUi()
+                    toast("绑定异常，请查看日志")
+                }
             }
-        }
-    }
-
-    private fun restorePreviousConfig(oldBase: String, oldApi: String, oldAuth: String) {
-        if (oldBase.isNotBlank()) {
-            store.setBaseUrl(oldBase)
-        }
-        if (oldApi.isBlank()) {
-            store.clearRemoteConfig()
-        } else {
-            store.setApiUrl(oldApi)
-            store.setAuthToken(oldAuth)
-        }
-        runOnUiThread {
-            binding.etBaseUrl.setText(store.getBaseUrl())
-            refreshUi()
         }
     }
 
