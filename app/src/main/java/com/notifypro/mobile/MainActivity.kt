@@ -397,54 +397,60 @@ class MainActivity : AppCompatActivity() {
             val oldBase = store.getBaseUrl()
             val oldApi = store.getApiUrl()
             val oldAuth = store.getAuthToken()
-            val baseChanged = oldBase.isNotBlank() && oldBase != baseUrl
-            store.setBaseUrl(baseUrl)
-            // When switching scan target, always clear old api/token first to avoid stale endpoint confusion.
-            if (baseChanged || oldApi.isNotBlank()) {
-                store.clearRemoteConfig()
-                MobileLogStore.info(applicationContext, "开始扫码绑定，已清空旧接口配置: $oldBase -> $baseUrl")
-            }
-            runOnUiThread {
-                binding.etBaseUrl.setText(baseUrl)
-                refreshUi()
-            }
-
-            val approved = NotifyApi.approvePairing(baseUrl, token)
-            if (!approved) {
-                restorePreviousConfig(oldBase, oldApi, oldAuth)
-                MobileLogStore.warn(applicationContext, "绑定确认失败")
-                runOnUiThread { toast("绑定确认失败") }
-                return@execute
-            }
-
-            var claim = NotifyApi.autoClaim(baseUrl, store.getDeviceId(), store.getDeviceName(), token)
-            if (claim == null) {
-                // Some devices/network paths have slight delay after approve -> allow short retries.
-                for (i in 0 until 5) {
-                    Thread.sleep(600)
-                    claim = NotifyApi.autoClaim(baseUrl, store.getDeviceId(), store.getDeviceName(), token)
-                    if (claim != null) break
+            try {
+                val baseChanged = oldBase.isNotBlank() && oldBase != baseUrl
+                store.setBaseUrl(baseUrl)
+                // When switching scan target, always clear old api/token first to avoid stale endpoint confusion.
+                if (baseChanged || oldApi.isNotBlank()) {
+                    store.clearRemoteConfig()
+                    MobileLogStore.info(applicationContext, "开始扫码绑定，已清空旧接口配置: $oldBase -> $baseUrl")
                 }
-            }
-            if (claim == null) {
+                runOnUiThread {
+                    binding.etBaseUrl.setText(baseUrl)
+                    refreshUi()
+                }
+
+                val approved = NotifyApi.approvePairing(baseUrl, token)
+                if (!approved) {
+                    restorePreviousConfig(oldBase, oldApi, oldAuth)
+                    MobileLogStore.warn(applicationContext, "绑定确认失败")
+                    runOnUiThread { toast("绑定确认失败") }
+                    return@execute
+                }
+
+                var claim = NotifyApi.autoClaim(baseUrl, store.getDeviceId(), store.getDeviceName(), token)
+                if (claim == null) {
+                    // Some devices/network paths have slight delay after approve -> allow short retries.
+                    for (i in 0 until 5) {
+                        Thread.sleep(600)
+                        claim = NotifyApi.autoClaim(baseUrl, store.getDeviceId(), store.getDeviceName(), token)
+                        if (claim != null) break
+                    }
+                }
+                if (claim == null) {
+                    restorePreviousConfig(oldBase, oldApi, oldAuth)
+                    MobileLogStore.warn(applicationContext, "领取配置失败")
+                    runOnUiThread { toast("领取配置失败") }
+                    return@execute
+                }
+
+                store.setBaseUrl(baseUrl)
+                store.setApiUrl(claim.apiUrl)
+                store.setAuthToken(claim.authToken)
+
+                runOnUiThread {
+                    binding.etBaseUrl.setText(baseUrl)
+                    MobileLogStore.info(applicationContext, "绑定成功: $baseUrl")
+                    refreshUi()
+                    toast("绑定成功")
+                    testConnection()
+                    loadStats()
+                    loadSettings()
+                }
+            } catch (e: Throwable) {
                 restorePreviousConfig(oldBase, oldApi, oldAuth)
-                MobileLogStore.warn(applicationContext, "领取配置失败")
-                runOnUiThread { toast("领取配置失败") }
-                return@execute
-            }
-
-            store.setBaseUrl(baseUrl)
-            store.setApiUrl(claim.apiUrl)
-            store.setAuthToken(claim.authToken)
-
-            runOnUiThread {
-                binding.etBaseUrl.setText(baseUrl)
-                MobileLogStore.info(applicationContext, "绑定成功: $baseUrl")
-                refreshUi()
-                toast("绑定成功")
-                testConnection()
-                loadStats()
-                loadSettings()
+                MobileLogStore.warn(applicationContext, "绑定异常: ${e.message}")
+                runOnUiThread { toast("绑定异常，请查看日志") }
             }
         }
     }

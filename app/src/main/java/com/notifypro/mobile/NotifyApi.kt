@@ -72,34 +72,39 @@ object NotifyApi {
     }
 
     fun autoClaim(baseUrl: String, deviceId: String, deviceName: String, token: String = ""): ClaimResult? {
-        val base = ConfigStore.normalizeBaseUrl(baseUrl)
-        if (base.isBlank()) return null
+        return try {
+            val base = ConfigStore.normalizeBaseUrl(baseUrl)
+            if (base.isBlank()) return null
 
-        val body = JSONObject()
-            .put("deviceId", deviceId)
-            .put("deviceName", deviceName)
-            .put("platform", "android")
-        if (token.isNotBlank()) {
-            body.put("token", token.trim())
-        }
+            val body = JSONObject()
+                .put("deviceId", deviceId)
+                .put("deviceName", deviceName)
+                .put("platform", "android")
+            if (token.isNotBlank()) {
+                body.put("token", token.trim())
+            }
 
-        val (code, text) = request("POST", "$base/api/pairing/auto-claim", body.toString(), null, 5000)
-        if (code != 200 || text.isBlank()) {
-            Log.w(TAG, "autoClaim fail: code=$code body=${text.take(180)}")
-            return null
+            val (code, text) = request("POST", "$base/api/pairing/auto-claim", body.toString(), null, 5000)
+            if (code != 200 || text.isBlank()) {
+                Log.w(TAG, "autoClaim fail: code=$code body=${text.take(180)}")
+                return null
+            }
+            val json = JSONObject(text)
+            if (!json.optBoolean("ok", false)) {
+                Log.w(TAG, "autoClaim fail: ok=false body=${text.take(180)}")
+                return null
+            }
+            val config = json.optJSONObject("config") ?: return null
+            val apiUrl = config.optString("apiUrl", "")
+            if (apiUrl.isBlank()) return null
+            ClaimResult(
+                apiUrl = apiUrl,
+                authToken = config.optString("authToken", "")
+            )
+        } catch (e: Throwable) {
+            Log.w(TAG, "autoClaim exception: ${e.message}")
+            null
         }
-        val json = JSONObject(text)
-        if (!json.optBoolean("ok", false)) {
-            Log.w(TAG, "autoClaim fail: ok=false body=${text.take(180)}")
-            return null
-        }
-        val config = json.optJSONObject("config") ?: return null
-        val apiUrl = config.optString("apiUrl", "")
-        if (apiUrl.isBlank()) return null
-        return ClaimResult(
-            apiUrl = apiUrl,
-            authToken = config.optString("authToken", "")
-        )
     }
 
     fun approvePairing(baseUrl: String, token: String): Boolean {
