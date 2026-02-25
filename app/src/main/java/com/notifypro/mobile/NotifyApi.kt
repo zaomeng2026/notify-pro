@@ -71,7 +71,7 @@ object NotifyApi {
         }
     }
 
-    fun autoClaim(baseUrl: String, deviceId: String, deviceName: String): ClaimResult? {
+    fun autoClaim(baseUrl: String, deviceId: String, deviceName: String, token: String = ""): ClaimResult? {
         val base = ConfigStore.normalizeBaseUrl(baseUrl)
         if (base.isBlank()) return null
 
@@ -79,11 +79,20 @@ object NotifyApi {
             .put("deviceId", deviceId)
             .put("deviceName", deviceName)
             .put("platform", "android")
+        if (token.isNotBlank()) {
+            body.put("token", token.trim())
+        }
 
         val (code, text) = request("POST", "$base/api/pairing/auto-claim", body.toString(), null, 5000)
-        if (code != 200 || text.isBlank()) return null
+        if (code != 200 || text.isBlank()) {
+            Log.w(TAG, "autoClaim fail: code=$code body=${text.take(180)}")
+            return null
+        }
         val json = JSONObject(text)
-        if (!json.optBoolean("ok", false)) return null
+        if (!json.optBoolean("ok", false)) {
+            Log.w(TAG, "autoClaim fail: ok=false body=${text.take(180)}")
+            return null
+        }
         val config = json.optJSONObject("config") ?: return null
         val apiUrl = config.optString("apiUrl", "")
         if (apiUrl.isBlank()) return null

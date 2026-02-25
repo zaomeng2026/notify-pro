@@ -395,10 +395,12 @@ class MainActivity : AppCompatActivity() {
         toast("正在绑定，请稍候...")
         io.execute {
             val oldBase = store.getBaseUrl()
+            val oldApi = store.getApiUrl()
+            val oldAuth = store.getAuthToken()
             val baseChanged = oldBase.isNotBlank() && oldBase != baseUrl
             store.setBaseUrl(baseUrl)
             // When switching scan target, always clear old api/token first to avoid stale endpoint confusion.
-            if (baseChanged || store.getApiUrl().isNotBlank()) {
+            if (baseChanged || oldApi.isNotBlank()) {
                 store.clearRemoteConfig()
                 MobileLogStore.info(applicationContext, "开始扫码绑定，已清空旧接口配置: $oldBase -> $baseUrl")
             }
@@ -409,21 +411,23 @@ class MainActivity : AppCompatActivity() {
 
             val approved = NotifyApi.approvePairing(baseUrl, token)
             if (!approved) {
+                restorePreviousConfig(oldBase, oldApi, oldAuth)
                 MobileLogStore.warn(applicationContext, "绑定确认失败")
                 runOnUiThread { toast("绑定确认失败") }
                 return@execute
             }
 
-            var claim = NotifyApi.autoClaim(baseUrl, store.getDeviceId(), store.getDeviceName())
+            var claim = NotifyApi.autoClaim(baseUrl, store.getDeviceId(), store.getDeviceName(), token)
             if (claim == null) {
                 // Some devices/network paths have slight delay after approve -> allow short retries.
                 for (i in 0 until 5) {
                     Thread.sleep(600)
-                    claim = NotifyApi.autoClaim(baseUrl, store.getDeviceId(), store.getDeviceName())
+                    claim = NotifyApi.autoClaim(baseUrl, store.getDeviceId(), store.getDeviceName(), token)
                     if (claim != null) break
                 }
             }
             if (claim == null) {
+                restorePreviousConfig(oldBase, oldApi, oldAuth)
                 MobileLogStore.warn(applicationContext, "领取配置失败")
                 runOnUiThread { toast("领取配置失败") }
                 return@execute
@@ -442,6 +446,22 @@ class MainActivity : AppCompatActivity() {
                 loadStats()
                 loadSettings()
             }
+        }
+    }
+
+    private fun restorePreviousConfig(oldBase: String, oldApi: String, oldAuth: String) {
+        if (oldBase.isNotBlank()) {
+            store.setBaseUrl(oldBase)
+        }
+        if (oldApi.isBlank()) {
+            store.clearRemoteConfig()
+        } else {
+            store.setApiUrl(oldApi)
+            store.setAuthToken(oldAuth)
+        }
+        runOnUiThread {
+            binding.etBaseUrl.setText(store.getBaseUrl())
+            refreshUi()
         }
     }
 

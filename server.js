@@ -137,8 +137,8 @@ app.post('/api/pairing/claim', (req, res) => {
   return res.json({
     ok: true,
     config: {
-      apiUrl: absoluteUrl('/api/notify'),
-      healthUrl: absoluteUrl('/api/health'),
+      apiUrl: absoluteUrlForReq(req, '/api/notify'),
+      healthUrl: absoluteUrlForReq(req, '/api/health'),
       authToken: String(pairing.authToken || '')
     }
   });
@@ -161,7 +161,7 @@ app.post('/api/pairing/session', requireAdminPassword, async (req, res) => {
   });
   writeJson(PAIRING_SESSIONS_FILE, sessions.slice(0, 200));
 
-  const bindUrl = absoluteUrl(`/pair/${token}`);
+  const bindUrl = absoluteUrlForReq(req, `/pair/${token}`);
   const qrDataUrl = await QRCode.toDataURL(bindUrl, { margin: 1, width: 280 });
 
   return res.json({
@@ -176,7 +176,7 @@ app.post('/api/pairing/session', requireAdminPassword, async (req, res) => {
   });
 });
 
-app.get('/api/pairing/session/latest', requireAdminPassword, async (_req, res) => {
+app.get('/api/pairing/session/latest', requireAdminPassword, async (req, res) => {
   const now = Date.now();
   const sessions = cleanupSessions(readJson(PAIRING_SESSIONS_FILE, []), now);
   writeJson(PAIRING_SESSIONS_FILE, sessions);
@@ -184,7 +184,7 @@ app.get('/api/pairing/session/latest', requireAdminPassword, async (_req, res) =
   if (!session) {
     return res.json({ ok: true, session: null });
   }
-  const bindUrl = absoluteUrl(`/pair/${session.token}`);
+  const bindUrl = absoluteUrlForReq(req, `/pair/${session.token}`);
   const qrDataUrl = await QRCode.toDataURL(bindUrl, { margin: 1, width: 280 });
   return res.json({
     ok: true,
@@ -206,7 +206,7 @@ app.get('/api/pairing/session/:token', requireAdminPassword, async (req, res) =>
     return res.status(404).json({ ok: false, message: 'session not found' });
   }
   try {
-    const bindUrl = absoluteUrl(`/pair/${session.token}`);
+    const bindUrl = absoluteUrlForReq(req, `/pair/${session.token}`);
     const qrDataUrl = await QRCode.toDataURL(bindUrl, { margin: 1, width: 280 });
     return res.json({
       ok: true,
@@ -217,7 +217,7 @@ app.get('/api/pairing/session/:token', requireAdminPassword, async (req, res) =>
       }
     });
   } catch (_err) {
-    const bindUrl = absoluteUrl(`/pair/${session.token}`);
+    const bindUrl = absoluteUrlForReq(req, `/pair/${session.token}`);
     return res.json({
       ok: true,
       session: {
@@ -231,15 +231,22 @@ app.get('/api/pairing/session/:token', requireAdminPassword, async (req, res) =>
 
 // Public bootstrap pairing session for display page:
 // when no device is bound yet, homepage can show QR directly without entering admin.
-app.get('/api/pairing/public-session', async (_req, res) => {
+app.get('/api/pairing/public-session', async (req, res) => {
   const now = Date.now();
   const pairing = readJson(PAIRING_FILE, defaultPairing());
   cleanupPairingDevices(pairing, now);
   writeJson(PAIRING_FILE, pairing);
 
-  const deviceCount = Object.keys(pairing.devices || {}).length;
-  if (deviceCount > 0) {
-    return res.json({ ok: true, eligible: false, reason: 'already-bound', deviceCount });
+  const status = getConnectionStatus(pairing);
+  if (status.online) {
+    return res.json({
+      ok: true,
+      eligible: false,
+      reason: 'device-online',
+      deviceCount: status.deviceCount,
+      online: !!status.online,
+      lastSeenAt: Number(status.lastSeenAt || 0)
+    });
   }
 
   const sessions = cleanupSessions(readJson(PAIRING_SESSIONS_FILE, []), now);
@@ -257,7 +264,7 @@ app.get('/api/pairing/public-session', async (_req, res) => {
   }
   writeJson(PAIRING_SESSIONS_FILE, sessions.slice(0, 200));
 
-  const bindUrl = absoluteUrl(`/pair/${session.token}`);
+  const bindUrl = absoluteUrlForReq(req, `/pair/${session.token}`);
   const qrDataUrl = await QRCode.toDataURL(bindUrl, { margin: 1, width: 280 });
   return res.json({
     ok: true,
@@ -307,6 +314,8 @@ app.post('/api/pairing/approve', (req, res) => {
 app.post('/api/pairing/auto-claim', (req, res) => {
   const now = Date.now();
   const ip = getClientIp(req);
+  const body = req.body || {};
+  const reqToken = String(body.token || '').trim();
   const pairing = readJson(PAIRING_FILE, defaultPairing());
   pairing.autoApprovals = pairing.autoApprovals || {};
 
@@ -330,12 +339,28 @@ app.post('/api/pairing/auto-claim', (req, res) => {
     }
   }
 
+  // Strong fallback: if client carries explicit pairing token, trust that token first.
+  if (!approval && reqToken) {
+    const sessions = cleanupSessions(readJson(PAIRING_SESSIONS_FILE, []), now);
+    const byToken = sessions.find((s) =>
+      s.token === reqToken &&
+      (s.status === 'approved' || s.status === 'used') &&
+      Number(s.expiresAt || 0) > now - 1000
+    );
+    if (byToken) {
+      approval = {
+        token: byToken.token,
+        approvedAt: Number(byToken.approvedAt || byToken.usedAt || now),
+        expiresAt: Number(byToken.expiresAt || now + APPROVAL_TTL_MS)
+      };
+    }
+  }
+
   if (!approval || approval.expiresAt < now) {
     writeJson(PAIRING_FILE, pairing);
     return res.status(403).json({ ok: false, message: 'not approved yet' });
   }
 
-  const body = req.body || {};
   const deviceId = String(body.deviceId || '').trim() || `device-${now}`;
   registerDevice(pairing, {
     deviceId,
@@ -364,8 +389,8 @@ app.post('/api/pairing/auto-claim', (req, res) => {
   return res.json({
     ok: true,
     config: {
-      apiUrl: absoluteUrl('/api/notify'),
-      healthUrl: absoluteUrl('/api/health'),
+      apiUrl: absoluteUrlForReq(req, '/api/notify'),
+      healthUrl: absoluteUrlForReq(req, '/api/health'),
       authToken: String(pairing.authToken || '')
     }
   });
@@ -1013,6 +1038,23 @@ function pickQrValue(input, oldValue) {
 
 function absoluteUrl(pathname) {
   return BASE_URL + pathname;
+}
+
+function absoluteUrlForReq(req, pathname) {
+  const forcedBase = normalizePublicBaseUrl(process.env.PUBLIC_BASE_URL || '');
+  if (forcedBase) return forcedBase + pathname;
+
+  try {
+    const xfh = String(req.get('x-forwarded-host') || '').split(',')[0].trim();
+    const host = xfh || String(req.get('host') || '').trim();
+    if (host) {
+      const xfp = String(req.get('x-forwarded-proto') || '').split(',')[0].trim().toLowerCase();
+      const proto = xfp === 'https' ? 'https' : (xfp === 'http' ? 'http' : (req.secure ? 'https' : 'http'));
+      const normalized = normalizePublicBaseUrl(`${proto}://${host}`);
+      if (normalized) return normalized + pathname;
+    }
+  } catch (_err) {}
+  return absoluteUrl(pathname);
 }
 
 function sendEvent(res, event, data) {
