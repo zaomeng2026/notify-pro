@@ -408,13 +408,17 @@ class MainActivity : AppCompatActivity() {
     private fun approveAndClaim(baseUrl: String, token: String) {
         toast("正在绑定，请稍候...")
         io.execute {
-            val trace = mutableListOf<String>()
+            val traceTag = "绑定追踪[v2]"
+            fun trace(msg: String) = MobileLogStore.info(applicationContext, "$traceTag $msg")
+            fun traceWarn(msg: String) = MobileLogStore.warn(applicationContext, "$traceTag $msg")
+
             try {
                 val oldBase = store.getBaseUrl()
                 val oldApi = store.getApiUrl()
                 val baseChanged = oldBase.isNotBlank() && oldBase != baseUrl
 
-                trace.add("start base=$baseUrl tokenLen=${token.length}")
+                trace("start base=$baseUrl tokenLen=${token.length} oldBase=$oldBase oldApi=${if (oldApi.isBlank()) "-" else oldApi}")
+
                 store.setBaseUrl(baseUrl)
                 if (baseChanged || oldApi.isNotBlank()) {
                     store.clearRemoteConfig()
@@ -427,9 +431,9 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 val approve = NotifyApi.approvePairingDebug(baseUrl, token)
-                trace.add("approve code=${approve.code} ok=${approve.ok} msg=${approve.message}")
+                trace("approve code=${approve.code} ok=${approve.ok} msg=${approve.message}")
                 if (approve.bodySnippet.isNotBlank()) {
-                    trace.add("approve body=${approve.bodySnippet}")
+                    trace("approve body=${approve.bodySnippet}")
                 }
                 if (!approve.ok) {
                     MobileLogStore.warn(applicationContext, "绑定确认失败，尝试直接领取配置 token=${token.take(8)}")
@@ -437,9 +441,9 @@ class MainActivity : AppCompatActivity() {
 
                 fun tryClaim(step: String, tokenArg: String): NotifyApi.ClaimResult? {
                     val r = NotifyApi.autoClaimDebug(baseUrl, store.getDeviceId(), store.getDeviceName(), tokenArg)
-                    trace.add("$step code=${r.code} ok=${r.claim != null} msg=${r.message}")
+                    trace("$step code=${r.code} ok=${r.claim != null} msg=${r.message}")
                     if (r.bodySnippet.isNotBlank()) {
-                        trace.add("$step body=${r.bodySnippet}")
+                        trace("$step body=${r.bodySnippet}")
                     }
                     return r.claim
                 }
@@ -465,14 +469,11 @@ class MainActivity : AppCompatActivity() {
                             deviceId = store.getDeviceId(),
                             deviceName = store.getDeviceName()
                         )
-                        trace.add("inferredApi=$inferredApi pingOk=${status != null}")
+                        trace("inferredApi=$inferredApi pingOk=${status != null}")
                         if (status != null) {
                             store.setBaseUrl(baseUrl)
                             store.setApiUrl(inferredApi)
                             store.setAuthToken("")
-                            for (line in trace.takeLast(12)) {
-                                MobileLogStore.info(applicationContext, "绑定追踪: $line")
-                            }
                             MobileLogStore.warn(applicationContext, "领取配置失败，已回退为基础地址推导接口: $inferredApi")
                             runOnUiThread {
                                 binding.etBaseUrl.setText(baseUrl)
@@ -487,9 +488,7 @@ class MainActivity : AppCompatActivity() {
 
                     store.setBaseUrl(baseUrl)
                     store.clearRemoteConfig()
-                    for (line in trace.takeLast(20)) {
-                        MobileLogStore.warn(applicationContext, "绑定追踪: $line")
-                    }
+                    traceWarn("claim failed finally, keep base and clear api/token")
                     MobileLogStore.warn(applicationContext, "领取配置失败，已保留最新基础地址: $baseUrl")
                     runOnUiThread {
                         binding.etBaseUrl.setText(baseUrl)
@@ -502,13 +501,10 @@ class MainActivity : AppCompatActivity() {
                 store.setBaseUrl(baseUrl)
                 store.setApiUrl(claim.apiUrl)
                 store.setAuthToken(claim.authToken)
-                trace.add("success api=${claim.apiUrl}")
+                trace("success api=${claim.apiUrl} authToken=${if (claim.authToken.isBlank()) "-" else "***"}")
 
                 runOnUiThread {
                     binding.etBaseUrl.setText(baseUrl)
-                    for (line in trace.takeLast(10)) {
-                        MobileLogStore.info(applicationContext, "绑定追踪: $line")
-                    }
                     MobileLogStore.info(applicationContext, "绑定成功: $baseUrl")
                     refreshUi()
                     toast("绑定成功")
@@ -519,10 +515,7 @@ class MainActivity : AppCompatActivity() {
             } catch (e: Throwable) {
                 store.setBaseUrl(baseUrl)
                 store.clearRemoteConfig()
-                trace.add("exception=${e.message}")
-                for (line in trace.takeLast(20)) {
-                    MobileLogStore.warn(applicationContext, "绑定追踪: $line")
-                }
+                traceWarn("exception=${e.message}")
                 MobileLogStore.warn(applicationContext, "绑定异常: ${e.message}")
                 runOnUiThread {
                     binding.etBaseUrl.setText(baseUrl)
